@@ -44,6 +44,9 @@ def build(fc, pay):
         lines.append("No recurring bills in these two weeks.")
     lines.append("")
     lines.append(f"Total: {money(fc['total'])}")
+    if fc.get("coming_up"):
+        lines.append("Coming up after: " + ", ".join(
+            f"{r['name']} {money(r['amount'])} ({date.fromisoformat(r['date']):%b} {date.fromisoformat(r['date']).day})" for r in fc["coming_up"]))
     if fc.get("pay_total"):
         lines.append(f"Pay (guess): {money(fc['pay_total'])}  ·  Left after bills: {money(fc['left'])}")
     return title, "\n".join(lines)

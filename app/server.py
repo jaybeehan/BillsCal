@@ -355,7 +355,8 @@ class Handler(BaseHTTPRequestHandler):
         return {
             "today": t.isoformat(), "default_start": A.default_start(s["pay"], t).isoformat(),
             "pay": s["pay"], "bills": s["bills"], "accounts": s["accounts"], "files": s["files"],
-            "manual": s["manual"], "txn_count": len(s["txns"]),
+            "manual": [dict(m, next=(lambda d: d.isoformat() if d else None)(A.next_manual(m, t))) for m in s["manual"]],
+            "txn_count": len(s["txns"]),
             "data_last": max((x["date"] for x in s["txns"]), default=None),
             "password": bool(PASSWORD), "ntfy": notify.enabled(), "ntfy_time": notify.NTFY_TIME,
             "sheet": sheets.status(),
@@ -402,6 +403,19 @@ class Handler(BaseHTTPRequestHandler):
                     "id": "m-" + uuid.uuid4().hex[:8], "name": str(m["name"])[:80],
                     "amount": round(float(m["amount"]), 2), "anchor": m["anchor"],
                     "cadence": m.get("cadence") if m.get("cadence") in ("weekly", "biweekly", "monthly", "quarterly", "yearly") else "monthly"})
+            if "manual_update" in b:
+                u = b["manual_update"]
+                for m in s.get("manual_bills", []):
+                    if m["id"] == u.get("id"):
+                        if u.get("name"):
+                            m["name"] = str(u["name"])[:80]
+                        if u.get("amount") not in (None, ""):
+                            m["amount"] = round(float(u["amount"]), 2)
+                        if u.get("anchor"):
+                            date.fromisoformat(u["anchor"])
+                            m["anchor"] = u["anchor"]
+                        if u.get("cadence") in ("weekly", "biweekly", "monthly", "quarterly", "yearly"):
+                            m["cadence"] = u["cadence"]
             if "manual_delete" in b:
                 s["manual_bills"] = [m for m in s.get("manual_bills", []) if m["id"] != b["manual_delete"]]
         save_settings(apply)

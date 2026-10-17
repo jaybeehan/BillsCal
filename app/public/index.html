@@ -197,6 +197,7 @@ dialog input,dialog select{border:1px solid var(--line);background:var(--bg);bor
           <h2 id="listTitle">Bills this period</h2>
           <div class="list" id="list"></div>
           <div class="totrow num"><span>Total</span><span id="listTotal"></span></div>
+          <div id="comingUp" style="margin-top:14px"></div>
         </div>
       </div>
     </div>
@@ -218,13 +219,13 @@ dialog input,dialog select{border:1px solid var(--line);background:var(--bg);bor
     </div>
     <div class="card">
       <h2>Bills you add yourself</h2>
-      <p class="section-note">For anything that won't show on these statements (cash, another bank, a new bill).</p>
+      <p class="section-note">For anything that won't show on these statements — yearly bills (car or house insurance, property tax, memberships), cash, another bank. Tap one to change it.</p>
       <div id="manualList"></div>
       <form class="grid-form" id="manualForm" style="margin-top:10px">
         <label>Name<input name="name" required placeholder="e.g. Rent"></label>
         <label>Amount<input name="amount" required inputmode="decimal" placeholder="0.00"></label>
-        <label>Next or last due<input name="anchor" type="date" required></label>
-        <label>Repeats<select name="cadence"><option>monthly</option><option>biweekly</option><option>weekly</option><option>quarterly</option><option>yearly</option></select></label>
+        <label>Due date<input name="anchor" type="date" required></label>
+        <label>Repeats<select name="cadence" data-cadence></select></label>
         <button class="btn primary">Add</button>
       </form>
     </div>
@@ -361,6 +362,8 @@ function renderPlan() {
       items.map((b) => `<div class="row"><div class="nm"><b>${esc(b.name)}<span class="tag ${b.status}">${b.status === "posted" ? "Paid" : b.status === "manual" ? "Added" : "Due"}</span></b><span>${esc(b.account ? acctName(b.account) : "added by you")}${b.status === "expected" && b.amount_from && b.amount_from !== "latest amount" ? " · " + esc(b.amount_from) : ""}</span></div><div class="amt num">${b.varies && b.status === "expected" ? "~" : ""}${money(b.amount)}</div></div>`).join("") + "</div>";
   }).join("") : `<div class="muted">No recurring bills in these two weeks.</div>`;
   $("#listTotal").textContent = money(F.total);
+  $("#comingUp").innerHTML = F.coming_up && F.coming_up.length ? `<div class="small muted" style="font-weight:700;margin-bottom:4px">Coming up after this period</div>` +
+    F.coming_up.map((r) => `<div class="row small"><div class="nm"><b style="font-weight:600">${esc(r.name)}</b><span>${fmt(r.date, { weekday: "short", month: "short", day: "numeric" })} · ${esc(cadenceLabel(r.cadence))}</span></div><div class="amt num">${money(r.amount)}</div></div>`).join("") : "";
 }
 $("#prev").onclick = () => { start = addDays(start, -(S.pay.every || 14)); sel = null; loadForecast(); };
 $("#next").onclick = () => { start = addDays(start, S.pay.every || 14); sel = null; loadForecast(); };
@@ -419,9 +422,21 @@ function renderBills() {
     });
   });
 
-  $("#manualList").innerHTML = S.manual.map((m) => `<div class="row"><div class="nm"><b>${esc(m.name)}</b><span>${esc(m.cadence)} from ${short(m.anchor)}</span></div><div class="amt num">${money(m.amount)}</div><button class="btn small ghost" data-del="${esc(m.id)}">Remove</button></div>`).join("") || `<div class="muted small">None yet.</div>`;
+  $("#manualList").innerHTML = S.manual.slice().sort((a, b) => (a.next || "9").localeCompare(b.next || "9")).map((m) => `<div class="row"><button class="nm linkish" data-edit="${esc(m.id)}" style="text-align:left;text-decoration:none"><b>${esc(m.name)}</b><span>${esc(cadenceLabel(m.cadence))}${m.next ? ` · next ${fmt(m.next, { month: "short", day: "numeric", year: "numeric" })}` : ""}</span></button><div class="amt num">${money(m.amount)}</div><button class="btn small ghost" data-del="${esc(m.id)}">Remove</button></div>`).join("") || `<div class="muted small">None yet.</div>`;
+  document.querySelectorAll("[data-edit]").forEach((b) => b.onclick = () => {
+    const m = S.manual.find((x) => x.id === b.dataset.edit);
+    dialog(`<h2>Edit bill</h2><label>Name<input name="name" value="${esc(m.name)}" required></label>
+      <label>Amount<input name="amount" inputmode="decimal" value="${m.amount.toFixed(2)}" required></label>
+      <label>Due date (any past or next one)<input name="anchor" type="date" value="${esc(m.next || m.anchor)}" required></label>
+      <label>Repeats<select name="cadence">${cadenceOpts(m.cadence)}</select></label>`,
+      (f) => saveSettings({ manual_update: { id: m.id, name: f.name.value.trim(), amount: f.amount.value.replace(/[$,]/g, ""), anchor: f.anchor.value, cadence: f.cadence.value } }));
+  });
   document.querySelectorAll("[data-del]").forEach((b) => b.onclick = () => saveSettings({ manual_delete: b.dataset.del }));
 }
+const CADENCES = [["yearly", "Every year"], ["monthly", "Every month"], ["quarterly", "Every 3 months"], ["biweekly", "Every 2 weeks"], ["weekly", "Every week"]];
+const cadenceOpts = (sel) => CADENCES.map(([v, l]) => `<option value="${v}" ${v === sel ? "selected" : ""}>${l}</option>`).join("");
+const cadenceLabel = (v) => (CADENCES.find((c) => c[0] === v) || [v, v])[1];
+document.querySelectorAll("[data-cadence]").forEach((s) => s.innerHTML = cadenceOpts("yearly"));
 $("#manualForm").onsubmit = async (e) => {
   e.preventDefault();
   const f = e.target;

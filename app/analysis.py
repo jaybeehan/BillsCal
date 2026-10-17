@@ -408,6 +408,26 @@ def project_manual(m, start, end):
     return out
 
 
+def next_manual(m, today):
+    ds = project_manual(m, today, today + timedelta(days=400))
+    return ds[0] if ds else None
+
+
+def coming_up(items, manual, after, days=45):
+    """Yearly / quarterly / half-yearly bills due soon after this period, as a heads-up."""
+    end = after + timedelta(days=days)
+    out = []
+    for m in manual:
+        if m.get("cadence") in ("yearly", "quarterly"):
+            for d in project_manual(m, after + timedelta(days=1), end):
+                out.append({"date": d.isoformat(), "name": m["name"], "amount": float(m["amount"]), "cadence": m["cadence"]})
+    for it in items:
+        if it["include"] and it["step"] in (3, 6, 12):
+            for d in project(it, after + timedelta(days=1), end):
+                out.append({"date": d.isoformat(), "name": it["name"], "amount": it["use_amount"], "cadence": it["cadence"]})
+    return sorted(out, key=lambda r: r["date"])
+
+
 def forecast(items, pay, manual, start, days=14):
     end = start + timedelta(days=days - 1)
     rows = []
@@ -435,4 +455,5 @@ def forecast(items, pay, manual, start, days=14):
         "total_posted": round(sum(r["amount"] for r in rows if r["status"] == "posted"), 2),
         "paydays": [d.isoformat() for d in pd], "pay_total": pay_total,
         "left": round(pay_total - total, 2),
+        "coming_up": coming_up(items, manual, end),
     }
