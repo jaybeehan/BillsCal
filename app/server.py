@@ -24,6 +24,7 @@ from urllib.parse import parse_qs, urlparse
 from zoneinfo import ZoneInfo
 
 import analysis as A
+import notify
 import parsers
 
 PORT = int(os.environ.get("PORT", "18490"))
@@ -298,6 +299,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200 if delete_file(m[1]) else 404, {"ok": True})
             if m and m[2] and method == "GET":
                 return self.send(200, self.file_text(m[1]), "text/plain; charset=utf-8")
+            if p == "/api/notify-test" and method == "POST":
+                if not notify.enabled():
+                    return self.send(400, {"error": "Set NTFY_URL in the compose file first"})
+                st = state()
+                t = today()
+                start = A.default_start(st["pay"], t)
+                title, msg = notify.build(A.forecast(st["bills"], st["pay"], st["manual"], start, 14), st["pay"])
+                notify.send("Test · " + title, msg)
+                return self.send(200, {"ok": True})
             if p == "/api/settings" and method == "POST":
                 self.api_settings(json.loads(self.body() or b"{}"))
                 return self.send(200, {"ok": True})
@@ -341,7 +351,7 @@ class Handler(BaseHTTPRequestHandler):
             "pay": s["pay"], "bills": s["bills"], "accounts": s["accounts"], "files": s["files"],
             "manual": s["manual"], "txn_count": len(s["txns"]),
             "data_last": max((x["date"] for x in s["txns"]), default=None),
-            "password": bool(PASSWORD),
+            "password": bool(PASSWORD), "ntfy": notify.enabled(), "ntfy_time": notify.NTFY_TIME,
         }
 
     def api_forecast(self, q):
@@ -405,5 +415,6 @@ if __name__ == "__main__":
     if not PASSWORD:
         log("WARNING: BILLSCAL_PASSWORD is empty, so anyone who can reach the page can see your statements.")
     state()
+    notify.start(state, today, lambda: datetime.now(TZ), DATA, log)
     log(f"BillsCal on port {PORT}, data in {DATA}")
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

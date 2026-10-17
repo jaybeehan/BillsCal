@@ -378,7 +378,12 @@ function renderBills() {
     : `<div class="muted">No regular pay found yet — add a few months of chequing statements, or set it below.</div>`) +
     `<div class="small muted" style="margin-top:8px">${p.amount_override || p.anchor_override ? `Using your settings: ${p.amount_override ? money(p.amount_override) : "detected amount"}, paydays from ${p.anchor_override ? short(p.anchor_override) : "detected dates"}, every ${p.every} days. ` : ""}
      <button class="linkish" id="payEdit">Set payday or amount yourself</button></div>` +
+    `<div class="small muted" style="margin-top:8px">${S.ntfy ? `Payday notification at ${esc(S.ntfy_time)} via ntfy · <button class="linkish" id="ntfyTest">send a test now</button>` : "Payday notifications are off (set NTFY_URL in the compose file)."}</div>` +
     (p.others && p.others.length ? `<div class="small muted" style="margin-top:8px">Other regular deposits: ${p.others.map((o) => `${esc(o.name)} (${esc(o.cadence)}, ~${money0(o.amount)})`).join(", ")}</div>` : "");
+  if ($("#ntfyTest")) $("#ntfyTest").onclick = async () => {
+    try { await api("api/notify-test", { method: "POST" }); toast("Sent — check your phone"); }
+    catch (e) { toast("Couldn't send: " + esc(e.message), 6000); }
+  };
   $("#payEdit").onclick = () => dialog(`<h2>Your pay</h2>
     <label>A payday<input type="date" name="anchor" value="${p.anchor || ""}"></label>
     <label>Amount (take-home)<input name="amount" inputmode="decimal" value="${p.amount_override ?? ""}" placeholder="${p.amount ? p.amount.toFixed(2) + " (detected)" : "0.00"}"></label>

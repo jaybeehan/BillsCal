@@ -50,6 +50,19 @@ a transaction is kept once no matter how many files include it.
 This is financial data: reach it at home or over Tailscale rather than adding it to the router's
 port forwarding.
 
+### Payday notification
+
+At 6 am on every payday it sends a [ntfy](https://ntfy.sh) push with each bill in the two weeks
+starting that day and the total (plus the pay guess and what's left).
+
+1. Install the **ntfy** app on your phone and subscribe to a topic with a hard-to-guess name,
+   e.g. `billscal-jason-x7k2` (anyone who knows a public ntfy.sh topic name can read it).
+2. In the compose file set `NTFY_URL: "https://ntfy.sh/billscal-jason-x7k2"`.
+3. On the *Bills* tab, tap **send a test now**.
+
+`NTFY_TIME` changes the time. If the NAS was off at 6 am, the message goes out when it's back the
+same day. Paydays come from the detected pay (or the payday you set on the *Bills* tab).
+
 ### Updating
 
 Every push to `main` rebuilds the image (~3 min). Then **Container Manager → Project → billscal →

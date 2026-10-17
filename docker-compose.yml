@@ -1,5 +1,5 @@
 # Paste this into Synology Container Manager → Project → Create.
-# Only the line marked CHANGE needs editing.
+# Only the lines marked CHANGE need editing.
 # Before creating the project, make an empty "data" folder inside the project folder
 # (File Station), e.g. /docker/billscal/data — Synology won't create it for you.
 # Your statements live only in that data folder on the NAS, never on GitHub.
@@ -15,5 +15,10 @@ services:
     environment:
       BILLSCAL_PASSWORD: "choose-a-password"   # CHANGE: password for the page
       TZ: "America/Edmonton"
+      # Payday notification (6 am, every payday): bills for the next 2 weeks + total.
+      NTFY_URL: "https://ntfy.sh/billscal-change-me-x7k2"   # CHANGE: your ntfy topic URL ("" = off)
+      NTFY_TIME: "06:00"
+      # NTFY_TOKEN: ""                  # only if your ntfy server needs a login token
+      # BILLSCAL_URL: "http://jtnas:18490"   # tapping the notification opens this
     volumes:
       - ./data:/data
