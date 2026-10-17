@@ -206,6 +206,7 @@ def summarize(key, rows, fit, data_end_by_acct, split):
         "nominal": gap, "dom": dom, "amount": round(amount, 2), "min": round(min(recent), 2),
         "max": round(max(recent), 2), "varies": spread >= 0.05, "count": len(rows),
         "avg12": round(avg12, 2), "avg_months": avg_months,
+        "latest": round(amts[-1], 2), "latest_date": last["date"],
         "first": rows[0]["date"], "last": last["date"], "account": last["account"],
         "example": last["desc"], "confidence": confidence, "ended": ended,
         "card_payment": card_payment, "default_include": bool(default),
@@ -277,7 +278,7 @@ def choose_amount(it, source, sheet_values):
         m = it["avg_months"]
         it["amount_from"] = f"average of last {m} month{'s' if m != 1 else ''}"
         return
-    it["use_amount"], it["amount_from"] = it["amount"], "latest amount"
+    it["use_amount"], it["amount_from"] = it["latest"], "latest amount"
 
 
 # ---------------------------------------------------------------------- pay

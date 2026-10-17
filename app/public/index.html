@@ -438,9 +438,9 @@ function amountDialog(b) {
   const sheetOpts = sh.enabled && sh.names.length ? opt("sheet", "12-month average from my sheet", "Tick one or more (e.g. Electricity + Gas if Echo bills them together):") +
     `<div style="display:flex;gap:12px;flex-wrap:wrap;margin:-4px 0 10px 26px">${sh.names.map((n) => `<label style="flex-direction:row;gap:5px;align-items:center;color:var(--ink);font-weight:500;margin:0"><input type="checkbox" name="sh" value="${esc(n)}" ${curSheet.includes(n) ? "checked" : ""}>${esc(n)} <span class="small muted">${sh.values[n] != null ? money0(sh.values[n]) : "?"}</span></label>`).join("")}</div>` : "";
   dialog(`<h2>${esc(b.name)}</h2>
-    ${opt("auto", "Automatic", b.varies ? `amount varies, so: average of last ${b.avg_months} months (${money(b.avg12)})` : `same each time: ${money(b.amount)}`)}
+    ${opt("auto", "Automatic", b.varies ? `amount varies, so: average of last ${b.avg_months} months (${money(b.avg12)})` : `same each time: ${money(b.latest)}`)}
     ${opt("avg12", "Average of the last 12 months", `from your statements — ${b.avg_months} month${b.avg_months === 1 ? "" : "s"} available so far: ${money(b.avg12)}`)}
-    ${opt("latest", "Latest amount", money(b.amount))}
+    ${opt("latest", "Latest amount", `${money(b.latest)} on ${short(b.latest_date)}`)}
     ${sheetOpts}
     <label>Or type your own amount<input name="v" inputmode="decimal" value="${b.amount_override ?? ""}" placeholder="leave empty to use the choice above"></label>`,
     async (f) => {
