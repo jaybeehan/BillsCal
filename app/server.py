@@ -25,6 +25,7 @@ from zoneinfo import ZoneInfo
 
 import analysis as A
 import notify
+import sheets
 import parsers
 
 PORT = int(os.environ.get("PORT", "18490"))
@@ -100,7 +101,7 @@ def state(force=False):
         files = load_files()
         parsed = [{"id": f["id"], "result": parsed_for(f)} for f in files]
         txns = A.merge_transactions(parsed, settings)
-        bills = A.detect_recurring(txns, settings)
+        bills = A.detect_recurring(txns, settings, sheets.values())
         pay = A.detect_pay(txns, settings)
         file_rows = []
         for f, p in zip(files, parsed):
@@ -308,6 +309,11 @@ class Handler(BaseHTTPRequestHandler):
                 title, msg = notify.build(A.forecast(st["bills"], st["pay"], st["manual"], start, 14), st["pay"])
                 notify.send("Test · " + title, msg)
                 return self.send(200, {"ok": True})
+            if p == "/api/sheet-refresh" and method == "POST":
+                if sheets.enabled():
+                    sheets.refresh(DATA)
+                    state(force=True)
+                return self.send(200, sheets.status())
             if p == "/api/settings" and method == "POST":
                 self.api_settings(json.loads(self.body() or b"{}"))
                 return self.send(200, {"ok": True})
@@ -352,6 +358,7 @@ class Handler(BaseHTTPRequestHandler):
             "manual": s["manual"], "txn_count": len(s["txns"]),
             "data_last": max((x["date"] for x in s["txns"]), default=None),
             "password": bool(PASSWORD), "ntfy": notify.enabled(), "ntfy_time": notify.NTFY_TIME,
+            "sheet": sheets.status(),
         }
 
     def api_forecast(self, q):
@@ -371,7 +378,7 @@ class Handler(BaseHTTPRequestHandler):
             if "bill" in b:
                 x = b["bill"]
                 cur = s.setdefault("bills", {}).setdefault(str(x["id"]), {})
-                for k in ("include", "name", "amount"):
+                for k in ("include", "name", "amount", "source"):
                     if k in x:
                         if x[k] in (None, ""):
                             cur.pop(k, None)
@@ -414,7 +421,8 @@ if __name__ == "__main__":
     os.makedirs(DATA, exist_ok=True)
     if not PASSWORD:
         log("WARNING: BILLSCAL_PASSWORD is empty, so anyone who can reach the page can see your statements.")
-    state()
+    sheets.start(DATA, lambda: state(force=True), log)
+    state(force=True)
     notify.start(state, today, lambda: datetime.now(TZ), DATA, log)
     log(f"BillsCal on port {PORT}, data in {DATA}")
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

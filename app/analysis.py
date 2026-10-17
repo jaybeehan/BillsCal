@@ -194,6 +194,9 @@ def summarize(key, rows, fit, data_end_by_acct, split):
     else:
         confidence = "low"
     card_payment = all(is_card_payment(t) for t in rows[-3:])
+    year = [abs(t["amount"]) for t in rows if (D(last["date"]) - D(t["date"])).days < 365]
+    avg12 = sum(year) / len(year)
+    avg_months = min(12, round((D(last["date"]) - D(rows[0]["date"])).days / 30.44) + 1)
     bid = key + (f"|{round2sig(statistics.median(amts)):g}" if split else "")
     default = not ended and not card_payment and (confidence != "low" or spread < 0.05)
     if fit["cadence"] == "weekly" and spread > 0.3:
@@ -202,6 +205,7 @@ def summarize(key, rows, fit, data_end_by_acct, split):
         "id": bid, "key": key, "name": key.title() + (f" ({amount:.2f})" if split else ""), "cadence": fit["cadence"], "step": fit["step"],
         "nominal": gap, "dom": dom, "amount": round(amount, 2), "min": round(min(recent), 2),
         "max": round(max(recent), 2), "varies": spread >= 0.05, "count": len(rows),
+        "avg12": round(avg12, 2), "avg_months": avg_months,
         "first": rows[0]["date"], "last": last["date"], "account": last["account"],
         "example": last["desc"], "confidence": confidence, "ended": ended,
         "card_payment": card_payment, "default_include": bool(default),
@@ -209,7 +213,7 @@ def summarize(key, rows, fit, data_end_by_acct, split):
     }
 
 
-def detect_recurring(txns, settings):
+def detect_recurring(txns, settings, sheet_values=None):
     data_end = {}
     for t in txns:
         data_end[t["account"]] = max(data_end.get(t["account"], ""), t["date"])
@@ -228,6 +232,12 @@ def detect_recurring(txns, settings):
                 f = fit_cadence([D(t["date"]) for t in c])
                 if f:
                     cl_fits.append((c, f))
+        # Split by amount only when the amounts run side by side (two Apple
+        # subscriptions), not when one bill is simply bigger in winter.
+        if len(cl_fits) >= 2:
+            newest = max(t["date"] for t in rows)
+            if not all((D(newest) - D(max(t["date"] for t in c))).days <= 45 for c, _ in cl_fits):
+                cl_fits = [] if whole else cl_fits[:1]
         if len(cl_fits) >= 2 or (cl_fits and not whole):
             for c, f in cl_fits:
                 items.append(summarize(key, c, f, data_end, split=True))
@@ -242,9 +252,32 @@ def detect_recurring(txns, settings):
             it["name"] = o["name"]
         if o.get("amount") not in (None, ""):
             it["amount_override"] = float(o["amount"])
-        it["use_amount"] = it.get("amount_override", it["amount"])
+        choose_amount(it, o.get("source", "auto"), sheet_values or {})
     items.sort(key=lambda i: (not i["include"], i["dom"] if i["step"] else 0, i["name"]))
     return items
+
+
+def choose_amount(it, source, sheet_values):
+    """Which amount to plan for. Your own number wins; then a linked sheet value;
+    then, for bills that vary (utilities), the average of the last 12 months."""
+    it["source"] = source
+    if "amount_override" in it:
+        it["use_amount"], it["amount_from"] = it["amount_override"], "your amount"
+        return
+    if source.startswith("sheet:"):
+        names = [n for n in source[6:].split("+") if n]
+        vals = [sheet_values.get(n) for n in names]
+        if names and all(isinstance(v, (int, float)) for v in vals):
+            it["use_amount"] = round(sum(vals), 2)
+            it["amount_from"] = "12-mo average from sheet (" + " + ".join(names) + ")"
+            return
+        it["sheet_missing"] = True  # sheet not reachable: fall back below
+    if source == "avg12" or (source in ("auto",) or source.startswith("sheet:")) and it["varies"]:
+        it["use_amount"] = it["avg12"]
+        m = it["avg_months"]
+        it["amount_from"] = f"average of last {m} month{'s' if m != 1 else ''}"
+        return
+    it["use_amount"], it["amount_from"] = it["amount"], "latest amount"
 
 
 # ---------------------------------------------------------------------- pay
@@ -382,7 +415,7 @@ def forecast(items, pay, manual, start, days=14):
         for d in project(it, start, end):
             rows.append({"date": d.isoformat(), "name": it["name"], "amount": it["use_amount"],
                          "status": "expected", "id": it["id"], "account": it["account"], "cadence": it["cadence"],
-                         "varies": it["varies"] and "amount_override" not in it})
+                         "varies": it["varies"] and "amount_override" not in it, "amount_from": it.get("amount_from")})
     for m in manual:
         for d in project_manual(m, start, end):
             rows.append({"date": d.isoformat(), "name": m["name"], "amount": float(m["amount"]),

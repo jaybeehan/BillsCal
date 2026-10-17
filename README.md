@@ -63,6 +63,21 @@ starting that day and the total (plus the pay guess and what's left).
 `NTFY_TIME` changes the time. If the NAS was off at 6 am, the message goes out when it's back the
 same day. Paydays come from the detected pay (or the payday you set on the *Bills* tab).
 
+### Utility amounts (12-month average)
+
+Bills whose amount varies (utilities) are planned at their average over the last 12 months.
+Bank downloads only reach back 3–6 months, so BillsCal can also read the "Average bill (12mo)"
+cells (I2) from the **Lacombe Utilities** Google Sheet:
+
+1. In File Station, copy `service-account.json` from `/docker/utility-bills/data` to `/docker/billscal/data`.
+   The sheet is already shared with that key, so nothing else to share.
+2. Keep `SHEET_ID` in the compose file (it's the Lacombe Utilities sheet).
+3. On the *Bills* tab, tap a utility's amount → **12-month average from my sheet** and tick
+   Electricity, Gas or Water (tick Electricity + Gas if Echo takes both in one payment).
+
+The sheet is re-read every hour, or tap **re-read** on the *Bills* tab. `SHEET_VALUES` changes which
+cells are read (`Name=range;Name=range`). If the sheet can't be read, the statement average is used.
+
 ### Updating
 
 Every push to `main` rebuilds the image (~3 min). Then **Container Manager → Project → billscal →

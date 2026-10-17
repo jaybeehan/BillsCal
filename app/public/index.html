@@ -210,7 +210,7 @@ dialog input,dialog select{border:1px solid var(--line);background:var(--bg);bor
     </div>
     <div class="card" style="margin-bottom:14px">
       <h2>Recurring bills found</h2>
-      <p class="section-note">Switched on = counted in the two-week total. Tap a name to rename it, the amount to set your own.</p>
+      <p class="section-note">Switched on = counted in the two-week total. Tap a name to rename it, the amount to choose what to plan for. Bills that vary (utilities) use their 12-month average.</p>
       <div id="billsOn"></div>
       <h2 style="margin-top:18px">Not counted</h2>
       <p class="section-note">Probably not bills (shopping that happens to repeat), stopped, or credit card payments — turn on any that should count. If you count a card payment, turn off that card's own subscriptions so they aren't counted twice.</p>
@@ -358,7 +358,7 @@ function renderPlan() {
     const dayTot = items.reduce((a, b) => a + b.amount, 0);
     return `<div class="dgroup ${sel && sel !== d ? "dim" : ""}"><div class="dhead"><span>${fmt(d, { weekday: "short", month: "short", day: "numeric" })}</span><span class="num">${items.length > 1 ? money(dayTot) : ""}</span></div>` +
       (paydays.has(d) ? `<div class="row"><div class="nm"><b>Payday <span class="tag pay">${S.pay.amount_override ? "pay" : "guess"}</span></b><span>${esc(S.pay.name || "Pay")}</span></div><div class="amt num" style="color:var(--pay)">+${money(S.pay.use_amount || 0)}</div></div>` : "") +
-      items.map((b) => `<div class="row"><div class="nm"><b>${esc(b.name)}<span class="tag ${b.status}">${b.status === "posted" ? "Paid" : b.status === "manual" ? "Added" : "Due"}</span></b><span>${esc(b.account ? acctName(b.account) : "added by you")}${b.varies && b.status === "expected" ? " · amount varies" : ""}</span></div><div class="amt num">${b.varies && b.status === "expected" ? "~" : ""}${money(b.amount)}</div></div>`).join("") + "</div>";
+      items.map((b) => `<div class="row"><div class="nm"><b>${esc(b.name)}<span class="tag ${b.status}">${b.status === "posted" ? "Paid" : b.status === "manual" ? "Added" : "Due"}</span></b><span>${esc(b.account ? acctName(b.account) : "added by you")}${b.status === "expected" && b.amount_from && b.amount_from !== "latest amount" ? " · " + esc(b.amount_from) : ""}</span></div><div class="amt num">${b.varies && b.status === "expected" ? "~" : ""}${money(b.amount)}</div></div>`).join("") + "</div>";
   }).join("") : `<div class="muted">No recurring bills in these two weeks.</div>`;
   $("#listTotal").textContent = money(F.total);
 }
@@ -379,7 +379,9 @@ function renderBills() {
     `<div class="small muted" style="margin-top:8px">${p.amount_override || p.anchor_override ? `Using your settings: ${p.amount_override ? money(p.amount_override) : "detected amount"}, paydays from ${p.anchor_override ? short(p.anchor_override) : "detected dates"}, every ${p.every} days. ` : ""}
      <button class="linkish" id="payEdit">Set payday or amount yourself</button></div>` +
     `<div class="small muted" style="margin-top:8px">${S.ntfy ? `Payday notification at ${esc(S.ntfy_time)} via ntfy · <button class="linkish" id="ntfyTest">send a test now</button>` : "Payday notifications are off (set NTFY_URL in the compose file)."}</div>` +
+    (S.sheet && S.sheet.enabled ? `<div class="small muted" style="margin-top:8px">Google Sheet: ${S.sheet.error ? `<span style="color:var(--warn)">${esc(S.sheet.error)}</span>` : Object.entries(S.sheet.values).map(([k, v]) => `${esc(k)} ${v != null ? money(v) : "?"}`).join(" · ")} · <button class="linkish" id="sheetRefresh">re-read</button></div>` : "") +
     (p.others && p.others.length ? `<div class="small muted" style="margin-top:8px">Other regular deposits: ${p.others.map((o) => `${esc(o.name)} (${esc(o.cadence)}, ~${money0(o.amount)})`).join(", ")}</div>` : "");
+  if ($("#sheetRefresh")) $("#sheetRefresh").onclick = async () => { toast("Reading sheet…"); await api("api/sheet-refresh", { method: "POST" }); await load(true); toast("Sheet re-read"); };
   if ($("#ntfyTest")) $("#ntfyTest").onclick = async () => {
     try { await api("api/notify-test", { method: "POST" }); toast("Sent — check your phone"); }
     catch (e) { toast("Couldn't send: " + esc(e.message), 6000); }
@@ -398,8 +400,9 @@ function renderBills() {
     return `<div class="bill ${b.include ? "" : "off"}" data-id="${esc(b.id)}">
       <label class="switch"><input type="checkbox" ${b.include ? "checked" : ""} aria-label="Count this bill"><span></span></label>
       <button class="nm linkish" data-act="name" style="text-align:left;text-decoration:none">${esc(b.name)}${tags}</button>
-      <button class="amt num linkish" data-act="amount" style="font-weight:700">${b.varies && !b.amount_override ? "~" : ""}${money(b.use_amount)}</button>
-      <div class="meta">${esc(cadenceText(b))} · last ${short(b.last)} · ${esc(acctName(b.account))}${b.varies ? ` · ${money0(b.min)}–${money0(b.max)}` : ""} · <button class="linkish" data-act="hist">history</button></div>
+      <button class="amt num linkish" data-act="amount" style="font-weight:700">${b.varies && !b.amount_override && !String(b.amount_from || "").includes("sheet") ? "~" : ""}${money(b.use_amount)}</button>
+      <div class="meta">${esc(cadenceText(b))} · last ${short(b.last)} · ${esc(acctName(b.account))}${b.varies ? ` · ${money0(b.min)}–${money0(b.max)}` : ""} · <button class="linkish" data-act="hist">history</button>
+        ${b.amount_from && b.amount_from !== "latest amount" ? `<div>Planning ${money(b.use_amount)}: ${esc(b.amount_from)}${b.sheet_missing ? " (sheet not readable right now)" : ""}</div>` : ""}</div>
     </div>`;
   };
   const on = S.bills.filter((b) => b.include), off = S.bills.filter((b) => !b.include);
@@ -411,8 +414,7 @@ function renderBills() {
     el.querySelectorAll("[data-act]").forEach((btn) => btn.onclick = () => {
       if (btn.dataset.act === "name") dialog(`<h2>Rename</h2><label>Name<input name="v" value="${esc(b.name)}" required></label><div class="small muted">From: ${esc(b.example)}</div>`,
         (f) => saveSettings({ bill: { id: b.id, name: f.v.value.trim() } }));
-      if (btn.dataset.act === "amount") dialog(`<h2>${esc(b.name)}</h2><label>Amount to plan for<input name="v" inputmode="decimal" value="${b.amount_override ?? ""}" placeholder="${b.amount.toFixed(2)} (detected)"></label><div class="small muted">Leave empty to use the detected amount.</div>`,
-        (f) => saveSettings({ bill: { id: b.id, amount: f.v.value.trim() } }));
+      if (btn.dataset.act === "amount") amountDialog(b);
       if (btn.dataset.act === "hist") dialog(`<h2>${esc(b.name)}</h2><div class="small muted">${esc(b.example)}</div><div class="hist num">${b.history.slice().reverse().map((h) => `${h.date} · ${money(h.amount)} · ${esc(acctName(h.account))}`).join("<br>")}</div>`, null);
     });
   });
@@ -428,6 +430,30 @@ $("#manualForm").onsubmit = async (e) => {
   await saveSettings({ manual_add: { name: f.name.value, amount, anchor: f.anchor.value, cadence: f.cadence.value } });
   f.reset();
 };
+function amountDialog(b) {
+  const sh = S.sheet || {};
+  const cur = b.source || "auto";
+  const curSheet = cur.startsWith("sheet:") ? cur.slice(6).split("+") : [];
+  const opt = (v, label, sub) => `<label style="flex-direction:row;align-items:flex-start;gap:8px;color:var(--ink);font-weight:500"><input type="radio" name="src" value="${v}" ${cur === v || (v === "sheet" && curSheet.length) ? "checked" : ""} style="margin-top:3px"><span>${label}<br><span class="small muted">${sub}</span></span></label>`;
+  const sheetOpts = sh.enabled && sh.names.length ? opt("sheet", "12-month average from my sheet", "Tick one or more (e.g. Electricity + Gas if Echo bills them together):") +
+    `<div style="display:flex;gap:12px;flex-wrap:wrap;margin:-4px 0 10px 26px">${sh.names.map((n) => `<label style="flex-direction:row;gap:5px;align-items:center;color:var(--ink);font-weight:500;margin:0"><input type="checkbox" name="sh" value="${esc(n)}" ${curSheet.includes(n) ? "checked" : ""}>${esc(n)} <span class="small muted">${sh.values[n] != null ? money0(sh.values[n]) : "?"}</span></label>`).join("")}</div>` : "";
+  dialog(`<h2>${esc(b.name)}</h2>
+    ${opt("auto", "Automatic", b.varies ? `amount varies, so: average of last ${b.avg_months} months (${money(b.avg12)})` : `same each time: ${money(b.amount)}`)}
+    ${opt("avg12", "Average of the last 12 months", `from your statements — ${b.avg_months} month${b.avg_months === 1 ? "" : "s"} available so far: ${money(b.avg12)}`)}
+    ${opt("latest", "Latest amount", money(b.amount))}
+    ${sheetOpts}
+    <label>Or type your own amount<input name="v" inputmode="decimal" value="${b.amount_override ?? ""}" placeholder="leave empty to use the choice above"></label>`,
+    async (f) => {
+      const src = [...f.src].find((r) => r.checked)?.value || "auto";
+      let source = src;
+      if (src === "sheet") {
+        const picked = [...(f.sh?.length !== undefined ? f.sh : f.sh ? [f.sh] : [])].filter((c) => c.checked).map((c) => c.value);
+        if (!picked.length) return toast("Tick at least one sheet value");
+        source = "sheet:" + picked.join("+");
+      }
+      await saveSettings({ bill: { id: b.id, source, amount: f.v.value.trim().replace(/[$,]/g, "") } });
+    });
+}
 async function saveSettings(body) {
   try { await api("api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); }
   catch (e) { toast("Couldn't save: " + esc(e.message)); }

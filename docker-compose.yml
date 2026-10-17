@@ -20,5 +20,8 @@ services:
       NTFY_TIME: "06:00"
       # NTFY_TOKEN: ""                  # only if your ntfy server needs a login token
       # BILLSCAL_URL: "http://jtnas:18490"   # tapping the notification opens this
+      # Optional: 12-month utility averages from the Lacombe Utilities Google Sheet.
+      # Copy service-account.json from /docker/utility-bills/data into /docker/billscal/data.
+      SHEET_ID: "1bo1mBDDxPsKPg5e8BMskq0rOWWfD4Ye9cG4zSN3-KQY"
     volumes:
       - ./data:/data
