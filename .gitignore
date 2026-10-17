@@ -1,0 +1,10 @@
+data/
+__pycache__/
+*.pyc
+.env
+# never commit real statements
+*.pdf
+*.qfx
+*.ofx
+*.qbo
+statements/

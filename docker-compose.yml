@@ -1,0 +1,19 @@
+# Paste this into Synology Container Manager → Project → Create.
+# Only the line marked CHANGE needs editing.
+# Before creating the project, make an empty "data" folder inside the project folder
+# (File Station), e.g. /docker/billscal/data — Synology won't create it for you.
+# Your statements live only in that data folder on the NAS, never on GitHub.
+
+services:
+  billscal:
+    image: ghcr.io/jaybeehan/billscal:latest
+    pull_policy: always
+    container_name: billscal
+    restart: unless-stopped
+    ports:
+      - "18490:18490"                     # page at http://NAS-IP:18490
+    environment:
+      BILLSCAL_PASSWORD: "choose-a-password"   # CHANGE: password for the page
+      TZ: "America/Edmonton"
+    volumes:
+      - ./data:/data
