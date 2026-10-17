@@ -60,6 +60,8 @@ h2{font-size:15px;margin:0 0 10px;font-weight:700}
 .dow{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:center;padding-bottom:2px}
 .day{background:var(--card);border:1px solid var(--line);border-radius:10px;min-height:96px;padding:6px;display:flex;flex-direction:column;gap:3px;cursor:pointer;text-align:left;min-width:0}
 .day.past{opacity:.62}
+.day.out{background:transparent;border-style:dashed;opacity:.4;cursor:default;min-height:0}
+.day.out .dn{font-weight:500}
 .day.today{border-color:var(--today);box-shadow:inset 0 0 0 1px var(--today)}
 .day.sel{outline:2px solid var(--ink);outline-offset:1px}
 .day .dn{font-weight:700;font-size:13px;display:flex;justify-content:space-between;align-items:baseline}
@@ -330,22 +332,26 @@ function renderPlan() {
   $("#sLeftCard").classList.toggle("neg", F.pay_total > 0 && F.left < 0);
   $("#sLeftSub").textContent = F.pay_total ? "pay minus bills, before day-to-day spending" : "set your pay on the Bills tab";
 
-  // calendar: 14 cells from the start date
+  // calendar: Sunday-to-Saturday weeks covering the two-week window; days outside it are greyed
   const byDay = {};
   for (const b of F.bills) (byDay[b.date] ||= []).push(b);
   const paydays = new Set(F.paydays);
+  const gridStart = addDays(F.start, -D(F.start).getDay());
+  const gridEnd = addDays(F.end, 6 - D(F.end).getDay());
   let html = "";
-  for (let i = 0; i < 7; i++) html += `<div class="dow">${fmt(addDays(F.start, i), { weekday: "short" })}</div>`;
-  for (let i = 0; i < 14; i++) {
-    const d = addDays(F.start, i), items = byDay[d] || [];
-    const tot = items.reduce((a, b) => a + b.amount, 0);
-    const cls = ["day", d < S.today && "past", d === S.today && "today", sel === d && "sel"].filter(Boolean).join(" ");
+  for (let i = 0; i < 7; i++) html += `<div class="dow">${fmt(addDays(gridStart, i), { weekday: "short" })}</div>`;
+  for (let d = gridStart, i = 0; d <= gridEnd; d = addDays(d, 1), i++) {
     const dt = D(d);
+    const head = `<div class="dn"><span>${dt.getDate()}</span><em>${i === 0 || dt.getDate() === 1 ? fmt(d, { month: "short" }) : ""}</em></div>`;
+    if (d < F.start || d > F.end) { html += `<div class="day out">${head}</div>`; continue; }
+    const items = byDay[d] || [];
+    const tot = items.reduce((a, b) => a + b.amount, 0);
+    const cls = ["day", d < S.today && "past", d === S.today && "today", sel === d && "sel", d === F.start && "first"].filter(Boolean).join(" ");
     let chips = paydays.has(d) ? `<div class="chip pay" title="Payday"><span class="nm">Payday</span><span class="pn">$</span></div>` : "";
     const show = items.slice(0, 3);
     chips += show.map((b) => `<div class="chip ${b.status}" title="${esc(b.name)} ${money(b.amount)}"><span class="nm">${esc(b.name)} </span><span class="num">${money0(b.amount)}</span></div>`).join("");
     if (items.length > 3) chips += `<div class="more">+${items.length - 3} more</div>`;
-    html += `<button class="${cls}" data-day="${d}"><div class="dn"><span>${dt.getDate()}</span><em>${i === 0 || dt.getDate() === 1 ? fmt(d, { month: "short" }) : ""}</em></div>${chips}${tot ? `<div class="tot num">${money0(tot)}</div>` : ""}</button>`;
+    html += `<button class="${cls}" data-day="${d}">${head}${chips}${tot ? `<div class="tot num">${money0(tot)}</div>` : ""}</button>`;
   }
   $("#cal").innerHTML = html;
   $("#cal").querySelectorAll(".chip.pay .pn").forEach((e) => { if (innerWidth > 560) e.remove(); });
