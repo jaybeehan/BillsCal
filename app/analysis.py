@@ -86,7 +86,7 @@ def account_list(parsed_files, settings):
 NOISE = set("""pos purchase purchases interac debit card online banking bill bills payment payments pmt pymt pre
 authorized preauthorized preauth auth pad misc memo dn pr cw ap ip rp fpos opos apos withdrawal deposit www com
 ca net org inc ltd corp co the of to from and ab bc on sk mb qc ns nb nl pe yt nt nu can canada recurring
-contactless debit tap web""".split())
+contactless debit tap web utility""".split())
 
 INTERNAL = re.compile(r"\b(online (banking )?transfer|transfer (to|from)|funds transfer|tfr|trsf|trf (to|from)|"
                       r"(to|from) (deposit|savings|chequing) account|between accounts|savings transfer)\b", re.I)
@@ -101,7 +101,7 @@ def merchant_key(desc):
         if re.search(r"\d", raw):
             continue
         toks += [t for t in re.split(r"[^a-z]+", raw) if len(t) >= 2 and t not in NOISE]
-    key = " ".join(toks[:3])
+    key = " ".join(toks[:4])  # 4 words: keeps endings like ECHO-EL vs ECHO-GA apart
     return key or re.sub(r"\d+", "", str(desc).lower()).strip()[:30] or "unknown"
 
 
@@ -185,8 +185,13 @@ def summarize(key, rows, fit, data_end_by_acct, split):
     gap = fit["nominal"]
     ended = (acct_end - D(last["date"])).days > gap * 1.6 + 3
     n = len(set(t["date"] for t in rows))
-    if spread > 0.45:
-        confidence = "low"  # amount all over the place: shopping, not a bill
+    # Same day every month = a bill, even if the amount swings (gas in winter).
+    days_sorted = sorted(set(D(t["date"]) for t in rows))
+    min_gap = min(((b - a).days for a, b in zip(days_sorted, days_sorted[1:])), default=999)
+    same_day = fit["step"] is not None and n >= 2 and max(dom_list) - min(dom_list) <= 5 \
+        and min_gap >= 20  # a bill comes once a period; shopping can land twice in a month
+    if spread > 0.45 and not same_day:
+        confidence = "low"  # amount all over the place on no fixed day: shopping, not a bill
     elif n >= (5 if fit["step"] is None else 3) and spread < 0.25:
         confidence = "high"
     elif n >= 3 or spread < 0.05:
