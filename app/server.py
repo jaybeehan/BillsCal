@@ -13,6 +13,8 @@ import json
 import os
 import re
 import secrets
+import signal
+import sys
 import threading
 import time
 import traceback
@@ -463,4 +465,17 @@ if __name__ == "__main__":
     state(force=True)
     notify.start(state, today, lambda: datetime.now(TZ), DATA, log)
     log(f"BillsCal on port {PORT}, data in {DATA}")
-    ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+    httpd = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
+    httpd.daemon_threads = True
+
+    def stop(signum, frame):
+        # Docker sends SIGTERM on Stop. As the container's main process Python would
+        # otherwise ignore it, and Docker would wait 10 s before forcing it off.
+        log("stopping")
+        threading.Thread(target=httpd.shutdown, daemon=True).start()
+
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+    httpd.serve_forever()
+    httpd.server_close()
+    sys.exit(0)
