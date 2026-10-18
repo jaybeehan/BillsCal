@@ -24,6 +24,7 @@ from urllib.parse import parse_qs, urlparse
 from zoneinfo import ZoneInfo
 
 import analysis as A
+import categories
 import notify
 import sheets
 import parsers
@@ -287,6 +288,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, self.api_state())
             if p == "/api/forecast" and method == "GET":
                 return self.send(200, self.api_forecast(q))
+            if p == "/api/spending" and method == "GET":
+                st = state()
+                return self.send(200, categories.payload(st["txns"], st["bills"], st["settings"], st["accounts"]))
             if p == "/api/transactions" and method == "GET":
                 return self.send(200, state()["txns"])
             if p == "/api/upload" and method == "POST":
@@ -373,7 +377,7 @@ class Handler(BaseHTTPRequestHandler):
             if "account" in b:
                 a = b["account"]
                 cur = s.setdefault("accounts", {}).setdefault(str(a["id"]), {})
-                for k in ("label", "flip", "ignore"):
+                for k in ("label", "flip", "ignore", "kind"):
                     if k in a:
                         cur[k] = a[k]
             if "bill" in b:
@@ -403,6 +407,26 @@ class Handler(BaseHTTPRequestHandler):
                     "id": "m-" + uuid.uuid4().hex[:8], "name": str(m["name"])[:80],
                     "amount": round(float(m["amount"]), 2), "anchor": m["anchor"],
                     "cadence": m.get("cadence") if m.get("cadence") in ("weekly", "biweekly", "monthly", "quarterly", "yearly") else "monthly"})
+            if "spend" in b:
+                x = b["spend"]
+                sp = s.setdefault("spend", {})
+                if "include_bills" in x:
+                    sp["include_bills"] = bool(x["include_bills"])
+                if "hidden" in x:
+                    sp["hidden"] = [c for c in x["hidden"] if c in categories.CAT_IDS]
+                if x.get("rule_merchant"):
+                    rules = sp.setdefault("rules", {})
+                    if x.get("cat") in categories.CAT_IDS:
+                        rules[str(x["rule_merchant"])[:80]] = x["cat"]
+                    else:
+                        rules.pop(str(x["rule_merchant"])[:80], None)
+                if x.get("tx_id"):
+                    tx = sp.setdefault("tx", {})
+                    tc = x.get("tx_cat", x.get("cat"))
+                    if tc in categories.CAT_IDS:
+                        tx[str(x["tx_id"])[:20]] = tc
+                    else:
+                        tx.pop(str(x["tx_id"])[:20], None)
             if "manual_update" in b:
                 u = b["manual_update"]
                 for m in s.get("manual_bills", []):

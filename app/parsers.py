@@ -24,7 +24,7 @@ import io
 import re
 from datetime import date, datetime, timedelta
 
-PARSER_VERSION = 3  # bump to make the server re-read every stored file
+PARSER_VERSION = 4  # bump to make the server re-read every stored file
 
 MONTHS = {m: i for i, m in enumerate(
     ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
@@ -101,6 +101,10 @@ def guess_bank(text):
         return "RBC"
     if "bmo" in t or "bank of montreal" in t:
         return "BMO"
+    if "td canada trust" in t or "toronto-dominion" in t or re.search(r"\btd\b", t) or "accountactivity" in t:
+        return "TD"
+    if "cibc" in t:
+        return "CIBC"
     return "?"
 
 
@@ -143,7 +147,7 @@ def parse_csv(raw, filename=""):
             hdr_i = i
             break
     if hdr_i is None:
-        return {"format": "csv", "transactions": [], "warnings": ["Couldn't find a header row with date and amount columns."]}
+        return parse_headerless_csv(rows, filename)
 
     hdr = [c.strip().lower() for c in rows[hdr_i]]
 
@@ -208,6 +212,55 @@ def parse_csv(raw, filename=""):
     flip_credit_if_needed(txns, warnings)
     if not txns:
         warnings.append("Header found, but no rows had a readable date and amount.")
+    return {"format": f"csv ({bank})", "transactions": txns, "warnings": warnings}
+
+
+def parse_headerless_csv(rows, filename=""):
+    """TD (accountactivity.csv) and CIBC: date, description, money out, money in[, balance or card #].
+
+    Chequing vs credit card is worked out from the running balance when there is one:
+    on a bank account money out lowers it, on a card money out raises it."""
+    warnings = []
+    bank = guess_bank(filename)
+    if bank == "?":
+        bank = "TD"  # TD is the common headerless export; rename the account if not
+    parsed = []
+    for r in rows:
+        if len(r) < 4:
+            continue
+        d = parse_date(r[0])
+        if not d:
+            continue
+        out_v, in_v = to_amount(r[2]), to_amount(r[3])
+        if out_v is None and in_v is None:
+            continue
+        bal = to_amount(r[4]) if len(r) > 4 else None
+        card = last4_of(r[4]) if len(r) > 4 and re.fullmatch(r"[\d*xX ]{12,19}", r[4].strip()) else ""
+        parsed.append((d, r[1].strip() or "(no description)", abs(out_v or 0), abs(in_v or 0), None if card else bal, card))
+    if not parsed:
+        return {"format": "csv", "transactions": [], "warnings": ["Couldn't find a header row with date and amount columns."]}
+
+    # balance check: compare consecutive rows in file order
+    bank_votes = card_votes = 0
+    for prev, cur in zip(parsed, parsed[1:]):
+        if prev[4] is None or cur[4] is None:
+            continue
+        for a, b, row in ((prev, cur, cur), (cur, prev, prev)):  # files may be newest- or oldest-first
+            if abs(a[4] - row[2] + row[3] - b[4]) < 0.011:
+                bank_votes += 1
+            if abs(a[4] + row[2] - row[3] - b[4]) < 0.011:
+                card_votes += 1
+    if card_votes > bank_votes or any(p[5] for p in parsed):
+        kind = "credit"
+    elif bank_votes > card_votes:
+        kind = "bank"
+    else:
+        kind = guess_kind(filename + " " + " ".join(p[1] for p in parsed[:50]))
+    last4 = next((p[5] for p in parsed if p[5]), "")
+    txns = [{"date": d.isoformat(), "desc": desc, "amount": round(i - o, 2), "bank": bank, "kind": kind, "last4": last4}
+            for d, desc, o, i, _, _ in parsed]
+    warnings.append(f"No header row: read as {bank} {'credit card' if kind == 'credit' else 'chequing/savings'}. "
+                    "If that's wrong, fix it on the Files tab.")
     return {"format": f"csv ({bank})", "transactions": txns, "warnings": warnings}
 
 

@@ -56,6 +56,8 @@ def merge_transactions(parsed_files, settings):
             if a.get("ignore"):
                 continue
             t = dict(t)
+            if a.get("kind") in ("bank", "credit"):
+                t["kind"] = a["kind"]
             if a.get("flip"):
                 t["amount"] = -t["amount"]
             out.append(t)
@@ -75,6 +77,8 @@ def account_list(parsed_files, settings):
             s["last"] = max(s["last"], t["date"])
     for s in stats.values():
         a = settings.get("accounts", {}).get(s["id"], {})
+        if a.get("kind") in ("bank", "credit"):
+            s["kind"] = a["kind"]
         kind = "Card" if s["kind"] == "credit" else "Chequing"
         s["label"] = a.get("label") or f"{s['bank']} {kind}" + (f" ••{s['last4']}" if s["last4"] else "")
         s["flip"] = bool(a.get("flip"))
@@ -90,7 +94,7 @@ contactless debit tap web utility""".split())
 
 INTERNAL = re.compile(r"\b(online (banking )?transfer|transfer (to|from)|funds transfer|tfr|trsf|trf (to|from)|"
                       r"(to|from) (deposit|savings|chequing) account|between accounts|savings transfer)\b", re.I)
-NOT_INTERNAL = re.compile(r"e-?\s?transfer|e-?trf|interac|email money|autodeposit", re.I)
+NOT_INTERNAL = re.compile(r"e-?\s?transfer|e-?trf|e-?tfr|interac|email money|autodeposit", re.I)
 CARD_WORDS = re.compile(r"visa|master ?card|\bmc\b|amex|american express|credit card|\bcr card\b", re.I)
 PAY_WORDS = re.compile(r"payroll|pay ?roll|salary|\bpay\b|dir(ect)? dep|wages|employer", re.I)
 

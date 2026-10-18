@@ -148,6 +148,68 @@ dialog label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var
 dialog input,dialog select{border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:9px 10px;color:var(--ink)}
 .dlg-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
 .hist{font-size:12px;color:var(--muted);margin-top:8px;max-height:140px;overflow:auto}
+/* spending */
+[hidden]{display:none!important}
+:root{--viz:#2a78d6;--viz-soft:#cde2fb;--grid:#e9e6df}
+@media (prefers-color-scheme:dark){:root{--viz:#3987e5;--viz-soft:#1c3556;--grid:#262a28}}
+.ranges{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:10px;scrollbar-width:none}
+.ranges::-webkit-scrollbar{display:none}
+.ranges button{flex:none;border:1px solid var(--line);background:var(--card);border-radius:99px;padding:6px 12px;font-weight:600;font-size:13.5px;color:var(--muted)}
+.ranges button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.custom-range{display:flex;gap:10px;margin-bottom:10px}
+.custom-range label{flex:1;display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);font-weight:600}
+.custom-range input{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:8px 9px;color:var(--ink)}
+.cover-note{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:8px 11px;margin-bottom:10px}
+.sum .small-big{font-size:17px;line-height:1.25;margin-top:4px}
+.chart-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.chart-head h2{margin:0}
+.viz{position:relative;width:100%;min-height:200px;touch-action:pan-y}
+.viz svg{display:block;width:100%;overflow:visible}
+.viz .grid line{stroke:var(--grid);stroke-width:1}
+.viz .axis text{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.viz .bar{fill:var(--viz);transition:opacity .12s}
+.viz .bar.partial{fill:url(#hatch)}
+.viz .hatch-bg{fill:var(--viz-soft)}
+.viz .hatch-line{stroke:var(--viz);stroke-width:2}
+.viz.hovering .bar:not(.hot){opacity:.45}
+.viz .avg{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:4 4;opacity:.55}
+.viz .avg-label{paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round;fill:var(--muted);font-size:11px;font-weight:600}
+.viz .val{paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round;fill:var(--ink);font-size:11px;font-weight:650;font-variant-numeric:tabular-nums}
+.viz .hit{fill:transparent;cursor:pointer}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:9px;padding:7px 10px;font-size:12.5px;line-height:1.35;white-space:nowrap;transform:translate(-50%,-100%);z-index:5;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.tip b{font-size:14px}
+.cat{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 6px;margin:0 -6px;border-radius:9px;cursor:pointer;border:0;background:none;text-align:left;width:calc(100% + 12px)}
+.cat:hover{background:var(--sunk)}
+.cat.on{background:var(--bill-soft)}
+.cat .nm{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cat .amt{font-weight:700;text-align:right}
+.cat .track{grid-column:1/-1;height:6px;border-radius:99px;background:var(--sunk);overflow:hidden}
+.cat .track i{display:block;height:100%;background:var(--viz);border-radius:99px}
+.cat .meta{grid-column:1/-1;font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.not-counted{border-top:1px solid var(--line);margin-top:10px;padding-top:10px;line-height:1.7}
+.not-counted button{font-size:12.5px}
+.merch{display:flex;align-items:center;gap:10px;padding:7px 6px;margin:0 -6px;border-radius:9px;cursor:pointer;border:0;background:none;width:calc(100% + 12px);text-align:left}
+.merch:hover{background:var(--sunk)}
+.merch.on{background:var(--bill-soft)}
+.merch .nm{flex:1;min-width:0}
+.merch .nm b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.merch .nm span{font-size:12px;color:var(--muted)}
+.merch .amt{font-weight:700}
+.stx{display:grid;grid-template-columns:62px 1fr auto;gap:10px;padding:8px 6px;margin:0 -6px;border-top:1px solid var(--line);font-size:14px;cursor:pointer;border-radius:6px}
+.stx:hover{background:var(--sunk)}
+.stx .d{color:var(--muted);font-size:13px}
+.stx .ds{min-width:0}
+.stx .ds b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stx .ds span{font-size:12px;color:var(--muted)}
+.stx .a{font-weight:650;text-align:right;white-space:nowrap}
+.stx .a.in{color:var(--pay)}
+.stx.off .a{color:var(--muted);font-weight:500}
+.chipcat{display:inline-block;background:var(--sunk);border-radius:5px;padding:0 5px;margin-right:4px;color:var(--ink);font-size:11.5px}
+.two.even{grid-template-columns:1fr 1fr}
+@media (max-width:860px){.two.even{grid-template-columns:1fr}}
+.dlg-cats{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;max-height:50vh;overflow:auto;margin:6px 0 10px}
+.dlg-cats label{flex-direction:row!important;align-items:center;gap:7px!important;color:var(--ink)!important;font-weight:500!important;margin:0!important;font-size:14px!important}
+@media (max-width:420px){.dlg-cats{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -163,15 +225,15 @@ dialog input,dialog select{border:1px solid var(--line);background:var(--bg);bor
   <nav class="tabs">
     <button data-go="plan" class="on">Next 2 weeks</button>
     <button data-go="bills">Bills</button>
+    <button data-go="spend">Spending</button>
     <button data-go="files">Files</button>
-    <button data-go="txns">Activity</button>
   </nav>
 
   <!-- ------------------------------------------------ plan -->
   <section data-tab="plan" class="on">
     <div id="emptyPlan" class="card empty" hidden>
       <h3>Drop in your statements to start</h3>
-      <p class="muted">CSV, QFX or PDF from RBC and BMO — chequing and credit cards. A few months of history gives the best guesses.</p>
+      <p class="muted">CSV, QFX or PDF from RBC, BMO and TD — chequing and credit cards. A few months of history gives the best guesses.</p>
       <button class="btn primary" onclick="picker.click()">Choose files</button>
     </div>
     <div id="planBody">
@@ -239,7 +301,7 @@ dialog input,dialog select{border:1px solid var(--line);background:var(--bg);bor
       <b>Drag statements here</b>
       <span class="muted small">or</span>
       <button class="btn small" onclick="picker.click()">choose files</button>
-      <div class="muted small" style="margin-top:8px">RBC &amp; BMO · CSV, QFX/OFX or PDF · chequing and credit cards. Adding the same or an overlapping statement twice is fine — nothing is counted twice.</div>
+      <div class="muted small" style="margin-top:8px">RBC, BMO &amp; TD · CSV, QFX/OFX or PDF · chequing and credit cards. Adding the same or an overlapping statement twice is fine — nothing is counted twice.</div>
     </div>
     <div class="card" style="margin-bottom:14px">
       <h2>Accounts</h2>
@@ -251,10 +313,47 @@ dialog input,dialog select{border:1px solid var(--line);background:var(--bg);bor
     </div>
   </section>
 
-  <!-- ------------------------------------------------ transactions -->
-  <section data-tab="txns">
-    <input class="search" id="q" placeholder="Search transactions…" type="search">
-    <div class="card"><div id="txList"></div><div id="txMore" class="muted small" style="padding-top:8px"></div></div>
+  <!-- ------------------------------------------------ spending -->
+  <section data-tab="spend">
+    <div class="ranges" id="ranges" role="group" aria-label="Date range"></div>
+    <div class="custom-range" id="customRange" hidden>
+      <label>From<input type="date" id="rFrom"></label>
+      <label>To<input type="date" id="rTo"></label>
+    </div>
+    <div class="cover-note small" id="coverNote" hidden></div>
+    <div id="spEmpty" class="card empty" hidden>
+      <h3>No spending in this range</h3>
+      <p class="muted">Pick another range, or add statements that cover these dates.</p>
+    </div>
+    <div id="spBody">
+      <div class="sum">
+        <div class="card"><div class="lbl" id="t1l">Spent</div><div class="big num" id="t1"></div><div class="sub" id="t1s"></div></div>
+        <div class="card"><div class="lbl" id="t2l">Per month</div><div class="big num" id="t2"></div><div class="sub" id="t2s"></div></div>
+        <div class="card left"><div class="lbl">Biggest</div><div class="big small-big" id="t3"></div><div class="sub" id="t3s"></div></div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="chart-head"><h2 id="chartTitle">Spending by month</h2><button class="btn small ghost" id="clearSel" hidden>Show all ✕</button></div>
+        <div class="viz" id="spChart" aria-describedby="chartTitle"></div>
+        <div class="small muted" id="chartNote" style="margin-top:6px"></div>
+      </div>
+      <div class="two even">
+        <div class="card">
+          <div class="chart-head"><h2>Categories</h2><button class="btn small ghost" id="whatCounts">What counts?</button></div>
+          <div id="catList"></div>
+          <div id="notCounted" class="not-counted small muted"></div>
+        </div>
+        <div class="card">
+          <h2 id="merchTitle">Where it went</h2>
+          <div id="merchList"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="chart-head"><h2 id="txTitle">Transactions</h2></div>
+        <input class="search" id="spQ" placeholder="Search all transactions…" type="search">
+        <div id="spTx"></div>
+        <div id="spTxMore" class="muted small" style="padding-top:8px"></div>
+      </div>
+    </div>
   </section>
 </div>
 
@@ -276,7 +375,7 @@ const fmt = (s, o) => D(s).toLocaleDateString("en-CA", o);
 const short = (s) => fmt(s, { month: "short", day: "numeric" });
 const ord = (n) => n + (["th", "st", "nd", "rd"][(n % 100 - 20) % 10] || ["th", "st", "nd", "rd"][n % 100] || "th");
 
-let S = null, F = null, start = null, sel = null, txns = null;
+let S = null, F = null, start = null, sel = null;
 const pref = (() => { try { return localStorage; } catch { return null; } })();
 
 async function api(p, opts = {}) {
@@ -302,10 +401,10 @@ async function load(keepStart) {
   S = await api("api/state");
   $("#logout").hidden = !S.password;
   if (!keepStart || !start) start = S.default_start;
-  txns = null;
   await loadForecast();
   renderBills(); renderFiles();
-  if ($('section[data-tab="txns"]').classList.contains("on")) renderTxns();
+  SP = null;
+  if ($('section[data-tab="spend"]').classList.contains("on")) loadSpending();
 }
 async function loadForecast() {
   F = await api("api/forecast?start=" + start + "&days=14");
@@ -486,12 +585,14 @@ function renderFiles() {
   $("#accts").innerHTML = S.accounts.map((a) => `<div class="acct" data-id="${esc(a.id)}">
     <div class="nm"><button class="linkish" data-act="label" style="font-weight:650;text-decoration:none">${esc(a.label)}</button>
       <div class="small muted">${a.count} rows · ${short(a.first)} to ${fmt(a.last, { month: "short", day: "numeric", year: "numeric" })}</div></div>
+    <select class="btn small" data-act="kind" aria-label="Account type"><option value="bank" ${a.kind === "bank" ? "selected" : ""}>Chequing / savings</option><option value="credit" ${a.kind === "credit" ? "selected" : ""}>Credit card</option></select>
     <label class="chk"><input type="checkbox" data-act="flip" ${a.flip ? "checked" : ""}>Signs backwards</label>
     <label class="chk"><input type="checkbox" data-act="ignore" ${a.ignore ? "checked" : ""}>Ignore</label></div>`).join("") || `<div class="muted small">Accounts show up here once you add statements.</div>`;
   document.querySelectorAll(".acct").forEach((el) => {
     const id = el.dataset.id, a = S.accounts.find((x) => x.id === id);
     $("[data-act=label]", el).onclick = () => dialog(`<h2>Account name</h2><label>Name<input name="v" value="${esc(a.label)}" required></label>`,
       (f) => saveSettings({ account: { id, label: f.v.value.trim() } }));
+    $("[data-act=kind]", el).onchange = (e) => saveSettings({ account: { id, kind: e.target.value } });
     $("[data-act=flip]", el).onchange = (e) => saveSettings({ account: { id, flip: e.target.checked } });
     $("[data-act=ignore]", el).onchange = (e) => saveSettings({ account: { id, ignore: e.target.checked } });
   });
@@ -508,22 +609,374 @@ function renderFiles() {
   });
 }
 
-// ---------------------------------------------------------------- transactions
-async function renderTxns() {
-  if (!txns) txns = await api("api/transactions");
-  const q = $("#q").value.trim().toLowerCase();
-  const list = txns.filter((t) => !q || t.desc.toLowerCase().includes(q) || String(Math.abs(t.amount)).includes(q)).slice().reverse();
-  $("#txList").innerHTML = list.slice(0, 400).map((t) => `<div class="tx num"><div class="d">${t.date}</div><div class="ds">${esc(t.desc)}<span>${esc(acctName(t.account))}</span></div><div class="a ${t.amount > 0 ? "in" : ""}">${t.amount > 0 ? "+" : ""}${money(t.amount)}</div></div>`).join("") || `<div class="muted">Nothing found.</div>`;
-  $("#txMore").textContent = list.length > 400 ? `Showing 400 of ${list.length}. Search to narrow down.` : `${list.length} transactions`;
+// ---------------------------------------------------------------- spending
+let SP = null, spTxLimit = 25;
+const spSel = { cat: null, merchant: null };
+const RANGES = [["this", "This month"], ["last", "Last month"], ["3m", "3 months"], ["6m", "6 months"], ["12m", "12 months"], ["ytd", "This year"], ["custom", "Custom"]];
+let spRange = { k: "3m" };
+try { const r = pref && JSON.parse(pref.getItem("billscal.range") || "null"); if (r && r.k) spRange = r; } catch {}
+const monthStart = (s) => s.slice(0, 8) + "01";
+const monthEnd = (s) => { const d = D(s); return iso(new Date(d.getFullYear(), d.getMonth() + 1, 0)); };
+const addMonths = (s, n) => {
+  const d = D(s), t = new Date(d.getFullYear(), d.getMonth() + n, 1);
+  t.setDate(Math.min(d.getDate(), new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate()));
+  return iso(t);
+};
+const daysBetween = (a, b) => Math.round((D(b) - D(a)) / 864e5) + 1;
+const MONTHS_N = { "3m": 3, "6m": 6, "12m": 12 };
+
+function rangeDates() {
+  const t = S.today, k = spRange.k;
+  if (k === "this") return [monthStart(t), t];
+  if (k === "last") { const s = addMonths(monthStart(t), -1); return [s, monthEnd(s)]; }
+  if (k === "ytd") return [t.slice(0, 4) + "-01-01", t];
+  if (k === "custom") {
+    let a = spRange.from || addMonths(t, -1), b = spRange.to || t;
+    return a <= b ? [a, b] : [b, a];
+  }
+  return [addMonths(monthStart(t), -(MONTHS_N[k] - 1)), t];
 }
-$("#q").oninput = () => renderTxns();
+function prevRange(a, b) {
+  const k = spRange.k;
+  if (k === "custom") { const n = daysBetween(a, b); return [addDays(a, -n), addDays(a, -1)]; }
+  const n = k === "this" || k === "last" ? 1 : k === "ytd" ? 12 : MONTHS_N[k];
+  const pb = b === monthEnd(b) ? monthEnd(addMonths(monthStart(b), -n)) : addMonths(b, -n);
+  return [addMonths(a, -n), pb];
+}
+const rangeText = (a, b) => {
+  const sameYear = a.slice(0, 4) === b.slice(0, 4);
+  return `${fmt(a, { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }) })} – ${fmt(b, { month: "short", day: "numeric", year: "numeric" })}`;
+};
+
+const catInfo = (id) => (SP.categories.find((c) => c.id === id) || { id, name: id, group: "spend" });
+const catName = (id) => catInfo(id).name;
+function counted(cat) {
+  const g = catInfo(cat).group;
+  if (SP.hidden.includes(cat)) return false;
+  return g === "spend" || (g === "bills" && SP.include_bills);
+}
+const prettyMerchant = (r) => r.merchant && r.merchant !== "unknown"
+  ? r.merchant.replace(/\b\w/g, (c) => c.toUpperCase()) : r.desc;
+
+async function loadSpending(force) {
+  if (!SP || force) SP = await api("api/spending");
+  renderSpending();
+}
+
+function renderRanges() {
+  $("#ranges").innerHTML = RANGES.map(([k, l]) => `<button data-k="${k}" class="${spRange.k === k ? "on" : ""}" aria-pressed="${spRange.k === k}">${l}</button>`).join("");
+  $("#ranges").querySelectorAll("button").forEach((b) => b.onclick = () => {
+    spRange = { ...spRange, k: b.dataset.k };
+    if (spRange.k === "custom" && !spRange.from) { const [a, z] = rangeDates(); spRange.from = a; spRange.to = z; }
+    try { pref && pref.setItem("billscal.range", JSON.stringify(spRange)); } catch {}
+    renderSpending();
+  });
+  const custom = spRange.k === "custom";
+  $("#customRange").hidden = !custom;
+  if (custom) { $("#rFrom").value = spRange.from; $("#rTo").value = spRange.to; }
+}
+["#rFrom", "#rTo"].forEach((id) => $(id).onchange = () => {
+  if (!$("#rFrom").value || !$("#rTo").value) return;
+  spRange = { k: "custom", from: $("#rFrom").value, to: $("#rTo").value };
+  try { pref && pref.setItem("billscal.range", JSON.stringify(spRange)); } catch {}
+  renderSpending();
+});
+
+function renderSpending(keepLimit) {
+  if (!SP) return;
+  if (!keepLimit) spTxLimit = 25;
+  renderRanges();
+  const [a, b] = rangeDates(), [pa, pb] = prevRange(a, b);
+  const accts = SP.accounts.filter((x) => !x.ignore);
+  const dataFirst = accts.reduce((m, x) => (!m || x.first < m ? x.first : m), null);
+  const dataLast = accts.reduce((m, x) => (!m || x.last > m ? x.last : m), null);
+
+  // coverage note: months before your statements start, or accounts that start later
+  const notes = [];
+  if (dataFirst && a < addDays(dataFirst, -3)) notes.push(`Your statements start ${fmt(dataFirst, { month: "short", day: "numeric", year: "numeric" })}, so earlier dates in this range will look low.`);
+  const late = accts.filter((x) => dataFirst && x.first > addDays(dataFirst, 20) && x.first > a);
+  if (late.length) notes.push(late.map((x) => `${esc(x.label)} starts ${short(x.first)}`).join(", ") + " — spending on it before then is missing.");
+  $("#coverNote").hidden = !notes.length;
+  $("#coverNote").innerHTML = notes.join(" ");
+
+  const inR = (r, x, y) => r.date >= x && r.date <= y;
+  const rows = SP.rows.filter((r) => inR(r, a, b));
+  const prevRows = SP.rows.filter((r) => inR(r, pa, pb));
+  const prevCovered = dataFirst && pa >= addDays(dataFirst, -3);
+  const spendOf = (list) => list.reduce((s, r) => s - r.amount, 0);
+
+  const countedRows = rows.filter((r) => counted(r.cat));
+  const byCat = {}, prevByCat = {};
+  for (const r of countedRows) byCat[r.cat] = (byCat[r.cat] || 0) - r.amount;
+  for (const r of prevRows) if (counted(r.cat)) prevByCat[r.cat] = (prevByCat[r.cat] || 0) - r.amount;
+  if (spSel.cat && !byCat[spSel.cat] && counted(spSel.cat)) byCat[spSel.cat] = 0;
+
+  const empty = !countedRows.length && !rows.length;
+  $("#spEmpty").hidden = !empty; $("#spBody").hidden = empty;
+  if (empty) return;
+
+  // what the tiles and chart show: everything counted, or just the selected category/payee
+  const focus = (r) => (spSel.cat ? r.cat === spSel.cat : counted(r.cat)) && (!spSel.merchant || r.merchant === spSel.merchant);
+  const focusRows = rows.filter(focus);
+  const total = spendOf(focusRows);
+  const prevTotal = spendOf(prevRows.filter(focus));
+  const days = daysBetween(a, b);
+  const label = spSel.merchant ? prettyMerchant(focusRows[0] || { merchant: spSel.merchant }) : spSel.cat ? catName(spSel.cat) : "Spent";
+
+  $("#t1l").textContent = label;
+  $("#t1").textContent = money(total);
+  const diff = total - prevTotal;
+  $("#t1s").textContent = prevCovered && prevTotal > 0
+    ? `${diff >= 0 ? "▲" : "▼"} ${money0(diff)} (${Math.round(Math.abs(diff) / prevTotal * 100)}%) vs ${rangeText(pa, pb)}`
+    : `${rangeText(a, b)}`;
+
+  const isThisMonth = spRange.k === "this";
+  if (isThisMonth) {
+    const dim = daysBetween(monthStart(b), monthEnd(b));
+    $("#t2l").textContent = "On pace for";
+    $("#t2").textContent = money0(total / days * dim);
+    $("#t2s").textContent = `if the rest of ${fmt(b, { month: "long" })} goes the same`;
+  } else if (days <= 35) {
+    $("#t2l").textContent = "Per day";
+    $("#t2").textContent = money(total / days);
+    $("#t2s").textContent = `over ${days} days`;
+  } else {
+    const months = days / 30.44;
+    $("#t2l").textContent = "Per month";
+    $("#t2").textContent = money0(total / months);
+    $("#t2s").textContent = `average over ${months.toFixed(1)} months`;
+  }
+
+  const cats = Object.entries(byCat).sort((x, y) => y[1] - x[1]);
+  const totalAll = Object.values(byCat).reduce((s, v) => s + v, 0);
+  if (spSel.merchant || spSel.cat) {
+    const visits = focusRows.filter((r) => r.amount < 0).length;
+    $("#t3").textContent = `${visits} purchase${visits === 1 ? "" : "s"}`;
+    $("#t3s").textContent = visits ? `about ${money0(total / Math.max(visits, 1))} each` : "";
+    $("#t3").previousElementSibling.textContent = "Count";
+  } else {
+    $("#t3").previousElementSibling.textContent = "Biggest";
+    $("#t3").textContent = cats.length ? catName(cats[0][0]) : "—";
+    $("#t3s").textContent = cats.length && totalAll > 0 ? `${money0(cats[0][1])} · ${Math.round(cats[0][1] / totalAll * 100)}% of spending` : "";
+  }
+
+  renderSpendChart(a, b, focusRows, dataFirst, dataLast);
+  renderCatList(cats, prevByCat, prevCovered, totalAll, days);
+  renderNotCounted(rows);
+  renderMerchants(rows.filter((r) => (spSel.cat ? r.cat === spSel.cat : counted(r.cat))));
+  renderSpendTx(rows);
+  $("#clearSel").hidden = !spSel.cat && !spSel.merchant;
+}
+$("#clearSel").onclick = () => { spSel.cat = null; spSel.merchant = null; renderSpending(); };
+
+// ---- chart: one bar per month (or per week for short ranges); one colour, no stacking
+function niceMax(v) {
+  if (v <= 0) return { max: 100, step: 25 };
+  const raw = v / 4, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw);
+  return { max: step * Math.ceil(v / step), step };
+}
+function renderSpendChart(a, b, focusRows, dataFirst, dataLast) {
+  const weekly = daysBetween(a, b) <= 62;
+  const buckets = [];
+  if (weekly) {
+    for (let s = addDays(a, -D(a).getDay()); s <= b; s = addDays(s, 7)) buckets.push({ s, e: addDays(s, 6) });
+  } else {
+    for (let s = monthStart(a); s <= b; s = addMonths(s, 1)) buckets.push({ s, e: monthEnd(s) });
+  }
+  for (const k of buckets) {
+    const from = k.s < a ? a : k.s, to = k.e > b ? b : k.e;
+    k.v = focusRows.filter((r) => r.date >= from && r.date <= to).reduce((t, r) => t - r.amount, 0);
+    k.partial = k.s < a || k.e > b || (dataFirst && k.s < dataFirst) || (dataLast && k.e > dataLast);
+    k.label = weekly ? short(k.s) : fmt(k.s, { month: "short" });
+    k.full = weekly ? `Week of ${short(k.s)}` : fmt(k.s, { month: "long", year: "numeric" });
+    k.from = from; k.to = to;
+  }
+  const whole = buckets.filter((k) => !k.partial);
+  const avg = whole.length >= 2 ? whole.reduce((t, k) => t + k.v, 0) / whole.length : null;
+
+  $("#chartTitle").textContent = `${spSel.merchant ? prettyMerchant({ merchant: spSel.merchant }) : spSel.cat ? catName(spSel.cat) : "Spending"} by ${weekly ? "week" : "month"}`;
+  const el = $("#spChart");
+  const W = Math.max(280, el.clientWidth || 600), H = 200, L = 46, R = 8, T = 18, B = 24;
+  const top = Math.max(1, ...buckets.map((k) => k.v), avg || 0);
+  const { max, step } = niceMax(top);
+  const y = (v) => T + (H - T - B) * (1 - Math.max(0, v) / max);
+  const band = (W - L - R) / buckets.length, bw = Math.min(48, band * 0.62);
+  const bar = (x, y0, w, h) => {
+    if (h <= 0.5) return "";
+    const r = Math.min(4, w / 2, h);
+    return `M${x},${y0 + h}V${y0 + r}Q${x},${y0} ${x + r},${y0}H${x + w - r}Q${x + w},${y0} ${x + w},${y0 + r}V${y0 + h}Z`;
+  };
+  let svg = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc($("#chartTitle").textContent)}">
+    <defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect class="hatch-bg" width="6" height="6"/><line class="hatch-line" x1="0" y1="0" x2="0" y2="6"/></pattern></defs><g class="grid">`;
+  for (let v = 0; v <= max + 0.01; v += step) svg += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>`;
+  svg += `</g><g class="axis">`;
+  for (let v = 0; v <= max + 0.01; v += step) svg += `<text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v >= 1000 ? "$" + (v / 1000).toLocaleString("en-CA", { maximumFractionDigits: 1 }) + "k" : "$" + Math.round(v)}</text>`;
+  const every = Math.ceil(buckets.length / Math.floor((W - L) / 44));
+  buckets.forEach((k, i) => { if (i % every === 0) svg += `<text x="${L + band * i + band / 2}" y="${H - 6}" text-anchor="middle">${esc(k.label)}</text>`; });
+  svg += `</g>`;
+  const showVals = buckets.length <= 8 && band >= 40;
+  buckets.forEach((k, i) => {
+    const x = L + band * i + (band - bw) / 2, yv = y(k.v);
+    svg += `<path class="bar${k.partial ? " partial" : ""}" data-i="${i}" d="${bar(x, yv, bw, H - B - yv)}"/>`;
+    if (showVals && k.v > 0) svg += `<text class="val" x="${x + bw / 2}" y="${yv - 5}" text-anchor="middle">${money0(k.v)}</text>`;
+  });
+  if (avg) svg += `<line class="avg" x1="${L}" x2="${W - R}" y1="${y(avg)}" y2="${y(avg)}"/><text class="avg-label" x="${W - R}" y="${y(avg) - 5}" text-anchor="end">avg ${money0(avg)}</text>`;
+  buckets.forEach((k, i) => { svg += `<rect class="hit" data-i="${i}" x="${L + band * i}" y="${T}" width="${band}" height="${H - T - B}"/>`; });
+  svg += `</svg><div class="tip" hidden></div>`;
+  el.innerHTML = svg;
+
+  const tip = $(".tip", el);
+  const show = (i) => {
+    const k = buckets[i];
+    el.classList.add("hovering");
+    el.querySelectorAll(".bar").forEach((p) => p.classList.toggle("hot", p.dataset.i == i));
+    tip.hidden = false;
+    tip.innerHTML = `${esc(k.full)}<br><b>${money(k.v)}</b>${k.partial ? `<br><span style="opacity:.75">${k.from !== k.s || k.to !== k.e ? `only ${short(k.from)}–${short(k.to)}` : "partial data"}</span>` : ""}`;
+    const px = (L + band * i + band / 2) / W * el.clientWidth;
+    tip.style.left = Math.min(Math.max(px, 70), el.clientWidth - 70) + "px";
+    tip.style.top = Math.max(y(k.v) - 8, 34) + "px";
+  };
+  const hide = () => { el.classList.remove("hovering"); tip.hidden = true; };
+  el.querySelectorAll(".hit").forEach((h) => {
+    h.onpointerenter = () => show(+h.dataset.i);
+    h.onpointerdown = () => show(+h.dataset.i);
+  });
+  el.querySelector("svg").onpointerleave = hide;
+
+  const notes = [];
+  if (buckets.some((k) => k.partial)) notes.push("Striped bars are partial (part of the period, or before/after your statements).");
+  if (avg) notes.push(`Dashed line: average of full ${weekly ? "weeks" : "months"}.`);
+  $("#chartNote").textContent = notes.join(" ");
+}
+
+// ---- categories
+function renderCatList(cats, prevByCat, prevCovered, totalAll, days) {
+  const max = Math.max(1, ...cats.map((c) => c[1]));
+  const months = days / 30.44;
+  $("#catList").innerHTML = cats.map(([id, v]) => {
+    const p = prevByCat[id] || 0, d = v - p;
+    const change = prevCovered && p > 0 && Math.abs(d) >= 1 ? `${d >= 0 ? "▲" : "▼"} ${money0(d)} vs before` : prevCovered && !p && v > 0 ? "new" : "";
+    return `<button class="cat ${spSel.cat === id ? "on" : ""}" data-cat="${id}">
+      <span class="nm">${esc(catName(id))}</span><span class="amt num">${money(v)}</span>
+      <span class="track"><i style="width:${Math.max(0, v) / max * 100}%"></i></span>
+      <span class="meta num"><span>${totalAll > 0 ? Math.round(v / totalAll * 100) : 0}%</span>${months >= 1.5 ? `<span>${money0(v / months)}/mo</span>` : ""}${change ? `<span>${change}</span>` : ""}</span>
+    </button>`;
+  }).join("") || `<div class="muted small">Nothing counted in this range.</div>`;
+  $("#catList").querySelectorAll(".cat").forEach((el) => el.onclick = () => {
+    spSel.cat = spSel.cat === el.dataset.cat ? null : el.dataset.cat; spSel.merchant = null; renderSpending();
+  });
+}
+function renderNotCounted(rows) {
+  const groups = {};
+  for (const r of rows) {
+    if (counted(r.cat)) continue;
+    const g = catInfo(r.cat).group;
+    const key = g === "bills" ? "bills" : r.cat;
+    (groups[key] ||= { v: 0, n: 0 });
+    groups[key].v += r.cat === "income" ? r.amount : Math.abs(r.amount);
+    groups[key].n++;
+  }
+  const label = { bills: "Bills (housing, utilities, phone, insurance)", transfer: "Transfers between accounts", cardpay: "Credit card payments", income: "Money in" };
+  const items = Object.entries(groups).sort((x, y) => y[1].v - x[1].v).map(([k, g]) =>
+    `<button class="linkish" data-nc="${k}">${esc(label[k] || catName(k))}</button> ${money0(g.v)}`);
+  $("#notCounted").innerHTML = items.length ? `Not counted: ${items.join(" · ")}` : "";
+  $("#notCounted").querySelectorAll("[data-nc]").forEach((b) => b.onclick = () => {
+    const k = b.dataset.nc;
+    spSel.merchant = null;
+    spSel.cat = k === "bills" ? (Object.keys(groups).length && rows.find((r) => catInfo(r.cat).group === "bills") || {}).cat : k;
+    renderSpending();
+    $("#txTitle").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+$("#whatCounts").onclick = () => {
+  const box = (c) => `<label><input type="checkbox" name="c" value="${c.id}" ${counted(c.id) ? "checked" : ""}>${esc(c.name)}</label>`;
+  dialog(`<h2>What counts as spending</h2>
+    <div class="small muted">Unticked categories are left out of totals and the chart. Their transactions still show in the list.</div>
+    <div class="dlg-cats">${SP.categories.filter((c) => c.group === "spend").map(box).join("")}</div>
+    <div class="small muted" style="font-weight:700">Bills (already on the Bills tab)</div>
+    <div class="dlg-cats">${SP.categories.filter((c) => c.group === "bills").map(box).join("")}</div>`,
+    async (f) => {
+      const on = new Set([...f.c].filter((x) => x.checked).map((x) => x.value));
+      const bills = SP.categories.filter((c) => c.group === "bills");
+      const include_bills = bills.some((c) => on.has(c.id));
+      const hidden = SP.categories.filter((c) => c.group !== "none" && !on.has(c.id) && !(c.group === "bills" && !include_bills)).map((c) => c.id);
+      await api("api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ spend: { hidden, include_bills } }) });
+      await loadSpending(true);
+    });
+};
+
+// ---- payees
+function renderMerchants(list) {
+  const by = {};
+  for (const r of list) {
+    const m = (by[r.merchant] ||= { v: 0, n: 0, r });
+    m.v -= r.amount; if (r.amount < 0) m.n++;
+  }
+  const top = Object.entries(by).filter(([, m]) => m.v > 0).sort((x, y) => y[1].v - x[1].v).slice(0, 10);
+  $("#merchTitle").textContent = spSel.cat ? `Where ${catName(spSel.cat).toLowerCase()} went` : "Where it went";
+  $("#merchList").innerHTML = top.map(([k, m]) => `<button class="merch ${spSel.merchant === k ? "on" : ""}" data-m="${esc(k)}">
+    <span class="nm"><b>${esc(prettyMerchant(m.r))}</b><span>${m.n} purchase${m.n === 1 ? "" : "s"}${spSel.cat ? "" : " · " + esc(catName(m.r.cat))}</span></span>
+    <span class="amt num">${money(m.v)}</span></button>`).join("") || `<div class="muted small">Nothing here.</div>`;
+  $("#merchList").querySelectorAll(".merch").forEach((el) => el.onclick = () => {
+    spSel.merchant = spSel.merchant === el.dataset.m ? null : el.dataset.m; renderSpending();
+  });
+}
+
+// ---- transactions (tap one to change its category)
+function renderSpendTx(rows) {
+  const q = $("#spQ").value.trim().toLowerCase();
+  // a search looks through everything you have, not just this range
+  let list = q ? SP.rows.filter((r) => r.desc.toLowerCase().includes(q) || String(Math.abs(r.amount)).includes(q) || catName(r.cat).toLowerCase().includes(q))
+    : rows.filter((r) => (!spSel.cat || r.cat === spSel.cat) && (!spSel.merchant || r.merchant === spSel.merchant));
+  list = list.slice().sort((x, y) => (y.date > x.date ? 1 : y.date < x.date ? -1 : 0));
+  $("#txTitle").textContent = q ? "Search results" : spSel.merchant ? prettyMerchant(list[0] || { merchant: spSel.merchant }) : spSel.cat ? catName(spSel.cat) : "Transactions";
+  const shown = Math.min(list.length, spTxLimit);
+  $("#spTx").innerHTML = list.slice(0, shown).map((r) => `<div class="stx ${counted(r.cat) ? "" : "off"}" data-id="${r.id}">
+    <div class="d num">${fmt(r.date, { month: "short", day: "numeric" })}${r.date.slice(0, 4) !== S.today.slice(0, 4) ? `<br>${r.date.slice(0, 4)}` : ""}</div>
+    <div class="ds"><b>${esc(r.desc)}</b><span><span class="chipcat">${esc(catName(r.cat))}</span>${esc(acctName(r.account))}</span></div>
+    <div class="a num ${r.amount > 0 ? "in" : ""}">${r.amount > 0 ? "+" : ""}${money(Math.abs(r.amount))}</div></div>`).join("") || `<div class="muted small">Nothing found.</div>`;
+  $("#spTxMore").innerHTML = (list.length > shown ? `<button class="btn small" id="spMore">Show more</button> ` : "") +
+    `${shown < list.length ? `${shown} of ` : ""}${list.length} transaction${list.length === 1 ? "" : "s"} · tap one to change its category`;
+  if ($("#spMore")) $("#spMore").onclick = () => { spTxLimit += 50; renderSpendTx(rows); };
+  $("#spTx").querySelectorAll(".stx").forEach((el) => el.onclick = () => recategorize(SP.rows.find((r) => r.id === el.dataset.id)));
+}
+let spQTimer;
+$("#spQ").oninput = () => { clearTimeout(spQTimer); spQTimer = setTimeout(() => renderSpending(), 150); };
+
+function recategorize(r) {
+  const groups = [["spend", "Spending"], ["bills", "Bills"], ["none", "Not spending"]];
+  const opts = groups.map(([g, l]) => `<optgroup label="${l}">${SP.categories.filter((c) => c.group === g).map((c) => `<option value="${c.id}" ${c.id === r.cat ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</optgroup>`).join("");
+  const sameCount = SP.rows.filter((x) => x.merchant === r.merchant).length;
+  const why = { "you set this one": "You set this one yourself.", "your rule for this payee": "From your rule for this payee.", "recurring bill": "It's a recurring bill.", "built-in list": "Matched the built-in list.", "money in": "Money coming in.", "no match": "Didn't match anything, so it's Other." }[r.why] || "";
+  dialog(`<h2>Category</h2>
+    <div class="small" style="margin-bottom:2px"><b>${esc(r.desc)}</b></div>
+    <div class="small muted" style="margin-bottom:10px">${fmt(r.date, { month: "short", day: "numeric", year: "numeric" })} · ${money(Math.abs(r.amount))} · ${esc(why)}</div>
+    <label>Category<select name="cat">${opts}</select></label>
+    <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-weight:500"><input type="checkbox" name="all" ${sameCount > 1 ? "checked" : ""}>
+      Also every “${esc(prettyMerchant(r))}” transaction${sameCount > 1 ? ` (${sameCount} now, and future ones)` : " in future"}</label>`,
+    async (f) => {
+      const cat = f.cat.value;
+      const body = f.all.checked ? { rule_merchant: r.merchant, cat, tx_id: r.id, tx_cat: null } : { tx_id: r.id, cat };
+      await api("api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ spend: body }) });
+      await loadSpending(true);
+      toast(`Moved to ${esc(catName(cat))}`);
+    }, `<button class="btn" type="button" data-reset>Automatic</button>`, (dlg) => {
+      $("[data-reset]", dlg).onclick = async () => {
+        dlg.close();
+        await api("api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ spend: { rule_merchant: r.merchant, cat: null, tx_id: r.id, tx_cat: null } }) });
+        await loadSpending(true);
+      };
+    });
+}
 
 // ---------------------------------------------------------------- tabs
 function go(tab) {
   document.querySelectorAll("nav.tabs button").forEach((b) => b.classList.toggle("on", b.dataset.go === tab));
   document.querySelectorAll("section[data-tab]").forEach((s) => s.classList.toggle("on", s.dataset.tab === tab));
   try { pref && pref.setItem("billscal.tab", tab); } catch {}
-  if (tab === "txns") renderTxns();
+  if (tab === "spend" && S) loadSpending();
 }
 document.querySelectorAll("nav.tabs button").forEach((b) => b.onclick = () => go(b.dataset.go));
 
@@ -552,7 +1005,7 @@ async function upload(fileList) {
   }
   await load(true);
   toast(`Added ${added} file${added === 1 ? "" : "s"} (${rows} rows)` + (dup ? ` · ${dup} already here` : "") +
-    (warn.length ? `<br>Check: ${warn.map(esc).join(", ")} — see Statements tab` : ""), warn.length ? 7000 : 3500);
+    (warn.length ? `<br>Check: ${warn.map(esc).join(", ")} — see Files tab` : ""), warn.length ? 7000 : 3500);
 }
 const picker = $("#picker");
 $("#addBtn").onclick = () => picker.click();
@@ -567,7 +1020,7 @@ addEventListener("drop", (e) => { e.preventDefault(); dragDepth = 0; $("#overlay
 let saved = null; try { saved = pref && pref.getItem("billscal.tab"); } catch {}
 if (saved && $(`section[data-tab="${saved}"]`)) go(saved);
 load().catch((e) => toast("Couldn't load: " + esc(e.message), 8000));
-addEventListener("resize", () => F && renderPlan());
+let rsz; addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { F && renderPlan(); SP && $('section[data-tab="spend"]').classList.contains("on") && renderSpending(); }, 120); });
 </script>
 </body>
 </html>

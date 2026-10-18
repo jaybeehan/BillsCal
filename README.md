@@ -13,6 +13,7 @@ GitHub has no data in it.
 |---|---|---|
 | RBC | **CSV** from Online Banking → *Download transactions* (chequing and Visa, one file can hold both) | QFX, PDF statements |
 | BMO | **CSV** from Online Banking → *Download transactions* (chequing or Mastercard) | QFX, PDF statements |
+| TD | **CSV** from EasyWeb → account → *Download* (`accountactivity.csv`, no header row; chequing vs Visa is worked out from the balance column) | QFX, PDF statements |
 
 CSV/QFX downloads are the most reliable. PDFs are read by finding the transaction table and its
 columns; if a PDF comes back with 0 rows or odd amounts, tap **Text** next to it on the *Files* tab
@@ -49,6 +50,23 @@ a transaction is kept once no matter how many files include it.
 
 This is financial data: reach it at home or over Tailscale rather than adding it to the router's
 port forwarding.
+
+### Spending tab
+
+A separate look at where money goes, built from the same statements:
+
+- **Quick ranges**: this month (with "on pace for"), last month, 3 / 6 / 12 months, this year, or custom dates.
+  Each is compared with the same stretch just before it.
+- **Chart**: one bar per month (per week for ranges up to two months), dashed average line; striped
+  bars are partial (part of a month, or outside the dates your statements cover).
+- **Categories**: groceries, restaurants, coffee, gas, shopping, home, health, subscriptions, kids, etc.,
+  from a built-in list of Canadian merchants. Tap a category to filter everything to it; tap a payee to
+  narrow further.
+- **Fixing categories**: tap any transaction → pick a category → optionally apply it to every transaction
+  from that payee (now and future). *Automatic* undoes it.
+- **What counts?**: bills (housing, utilities, phone, insurance) are left out by default since the Bills tab
+  covers them; transfers between your accounts, credit card payments and money in are never counted.
+  Card purchases are counted on the card, not again when you pay the card off.
 
 ### Payday notification
 
