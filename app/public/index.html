@@ -207,6 +207,9 @@ dialog{max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box}
 .cat .track{grid-column:1/-1;height:6px;border-radius:99px;background:var(--sunk);overflow:hidden}
 .cat .track i{display:block;height:100%;background:var(--viz);border-radius:99px}
 .cat .meta{grid-column:1/-1;font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.cat-sep{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 2px;padding-top:10px;border-top:1px solid var(--line)}
+.cat.off .nm,.cat.off .amt{color:var(--muted)}
+.cat.off .track i{background:var(--line)}
 .not-counted{border-top:1px solid var(--line);margin-top:10px;padding-top:10px;line-height:1.7}
 .not-counted button{font-size:12.5px}
 .merch{display:flex;align-items:center;gap:10px;padding:7px 6px;margin:0 -6px;border-radius:9px;cursor:pointer;border:0;background:none;width:calc(100% + 12px);text-align:left}
@@ -363,7 +366,7 @@ dialog{max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box}
         <div class="card left"><div class="lbl">Biggest</div><div class="big small-big" id="t3"></div><div class="sub" id="t3s"></div></div>
       </div>
       <div class="card" style="margin-bottom:14px">
-        <div class="chart-head"><h2 id="chartTitle">Spending by month</h2><button class="btn small ghost" id="clearSel" hidden>Show all ✕</button></div>
+        <div class="chart-head"><h2 id="chartTitle">Spending by month</h2><span><button class="btn small" id="toggleCount" hidden></button><button class="btn small ghost" id="clearSel" hidden>Show all ✕</button></span></div>
         <div class="viz" id="spChart" aria-describedby="chartTitle"></div>
         <div class="small muted" id="chartNote" style="margin-top:6px"></div>
       </div>
@@ -808,6 +811,9 @@ function renderSpending(keepLimit) {
   renderSideTx(rows);
   renderSpendTx(rows);
   $("#clearSel").hidden = !spSel.cat && !spSel.merchant;
+  const tg = $("#toggleCount"), selGroup = spSel.cat ? catInfo(spSel.cat).group : "none";
+  tg.hidden = !spSel.cat || selGroup === "none";
+  if (!tg.hidden) tg.textContent = counted(spSel.cat) ? "Leave out of totals" : "Count in totals";
 }
 $("#clearSel").onclick = () => { spSel.cat = null; spSel.merchant = null; renderSpending(); };
 
@@ -936,6 +942,25 @@ function renderCatList(cats, prevByCat, prevCovered, totalAll, days, rows) {
       <span class="meta num"><span>${totalAll > 0 ? Math.round(v / totalAll * 100) : 0}%</span>${months >= 1.5 ? `<span>${money0(v / months)}/mo</span>` : ""}${change ? `<span>${change}</span>` : ""}</span>
     </button>${below}`;
   }).join("") || `<div class="muted small">Nothing counted in this range.</div>`;
+  // categories you've left out of totals still show, greyed, so their purchases are one tap away
+  const out = {};
+  for (const r of rows) {
+    if (counted(r.cat) || catInfo(r.cat).group === "none") continue;
+    const o = (out[r.cat] ||= { v: 0, n: 0 }); o.v -= r.amount; if (r.amount < 0) o.n++;
+  }
+  const outList = Object.entries(out).sort((x, y) => y[1].v - x[1].v);
+  if (outList.length) {
+    $("#catList").insertAdjacentHTML("beforeend", `<div class="cat-sep">Left out of totals</div>` + outList.map(([id, o]) => {
+      let below = "";
+      if (spSel.cat === id && !wide()) {
+        below = `<div class="cat-x">${catItems(rows).map(miniTx).join("")}<div class="small muted" style="padding:6px 4px">tap one to change its category</div></div>`;
+      }
+      return `<button class="cat off ${spSel.cat === id ? "on" : ""}" data-cat="${id}" aria-expanded="${spSel.cat === id}">
+        <span class="nm">${esc(catName(id))}</span><span class="amt num">${money(o.v)}</span>
+        <span class="meta"><span>not counted</span><span>${o.n} purchase${o.n === 1 ? "" : "s"}</span></span>
+      </button>${below}`;
+    }).join(""));
+  }
   $("#catList").querySelectorAll(".cat").forEach((el) => el.onclick = () => {
     spSel.cat = spSel.cat === el.dataset.cat ? null : el.dataset.cat; spSel.merchant = null; sideLimit = 30;
     renderSpending();
@@ -946,9 +971,8 @@ function renderCatList(cats, prevByCat, prevCovered, totalAll, days, rows) {
 function renderNotCounted(rows) {
   const groups = {};
   for (const r of rows) {
-    if (counted(r.cat)) continue;
-    const g = catInfo(r.cat).group;
-    const key = g === "bills" ? "bills" : r.cat;
+    if (counted(r.cat) || catInfo(r.cat).group !== "none") continue; // left-out categories are listed above
+    const key = r.cat;
     (groups[key] ||= { v: 0, n: 0 });
     groups[key].v += r.cat === "income" ? r.amount : Math.abs(r.amount);
     groups[key].n++;
@@ -956,7 +980,7 @@ function renderNotCounted(rows) {
   const label = { bills: "Bills (housing, utilities, phone, insurance)", transfer: "Transfers between accounts", cardpay: "Credit card payments", income: "Money in" };
   const items = Object.entries(groups).sort((x, y) => y[1].v - x[1].v).map(([k, g]) =>
     `<button class="linkish" data-nc="${k}">${esc(label[k] || catName(k))}</button> ${money0(g.v)}`);
-  $("#notCounted").innerHTML = items.length ? `Not counted: ${items.join(" · ")}` : "";
+  $("#notCounted").innerHTML = items.length ? `Not spending: ${items.join(" · ")}` : "";
   $("#notCounted").querySelectorAll("[data-nc]").forEach((b) => b.onclick = () => {
     const k = b.dataset.nc;
     spSel.merchant = null;
@@ -965,6 +989,24 @@ function renderNotCounted(rows) {
     $("#txTitle").scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
+async function setCounted(cat, on) {
+  const prev = { hidden: SP.hidden.slice(), include_bills: SP.include_bills };
+  let hidden = SP.hidden.filter((h) => h !== cat), include_bills = SP.include_bills;
+  if (on) {
+    if (catInfo(cat).group === "bills" && !include_bills) {
+      // turn on just this bill category: the other bill categories stay out
+      include_bills = true;
+      for (const c of SP.categories) if (c.group === "bills" && c.id !== cat && !hidden.includes(c.id)) hidden.push(c.id);
+    }
+  } else {
+    hidden.push(cat);
+  }
+  await postSpend({ hidden, include_bills });
+  await loadSpending(true);
+  toast(`${esc(catName(cat))} ${on ? "counted in totals" : "left out of totals"}`, 10000, { label: "Undo", fn: async () => {
+    await postSpend(prev); await loadSpending(true); toast("Undone"); } });
+}
+$("#toggleCount").onclick = () => spSel.cat && setCounted(spSel.cat, !counted(spSel.cat));
 $("#whatCounts").onclick = () => {
   const box = (c) => `<label><input type="checkbox" name="c" value="${c.id}" ${counted(c.id) ? "checked" : ""}>${esc(c.name)}</label>`;
   dialog(`<h2>What counts as spending</h2>

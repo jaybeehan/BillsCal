@@ -75,6 +75,8 @@ A separate look at where money goes, built from the same statements:
   separate from interest charges.
 - **Search**: words and/or a dollar range (*$ from* / *$ to*) search every transaction you have, all dates and
   categories, with a total for what's found.
+- **Leave out of totals**: pick a category and tap *Leave out of totals* (or *Count in totals*). Left-out
+  categories stay in the list, greyed, with their purchases one tap away; they just don't add to totals or the chart.
 - **What counts?**: bills (housing, utilities, phone, insurance) are left out by default since the Bills tab
   covers them; transfers between your accounts, credit card payments and money in are never counted.
   Card purchases are counted on the card, not again when you pay the card off.
