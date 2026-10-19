@@ -10,6 +10,7 @@ Order of decisions for each transaction:
 
 import hashlib
 import re
+from collections import defaultdict
 
 import analysis as A
 
@@ -114,10 +115,22 @@ RULES = [
     (r"SALON|BARBER|HAIR|\bSPA\b|NAILS|ESTHETIC|SEPHORA|ULTA|LUSH|BATH & BODY|BATH AND BODY|COSMETIC|GOODLIFE|FITNESS|\bGYM\b|ANYTIME FIT|PLANET FITNESS|YOGA|CROSSFIT|ORANGETHEORY|F45", "personal"),
     (r"CANADAHELPS|CHARITY|DONATION|FOUNDATION|UNITED WAY|RED CROSS|SALVATION ARMY|CHURCH|PARISH|GOFUNDME|FLOWERS|FLORIST|1-800-FLOWERS|HALLMARK|GIFT", "gifts"),
     (r"AMAZON|AMZN|BEST BUY|BESTBUY|STAPLES|WINNERS|MARSHALLS|SPORT ?CHEK|ATMOSPHERE|MARK'?S|OLD NAVY|\bGAP\b|H ?& ?M|ZARA|UNIQLO|AMERICAN EAGLE|ARDENE|SKECHERS|FOOTLOCKER|FOOT LOCKER|SPORT ?EXPERTS|DOLLARAMA|DOLLAR TREE|DOLLAR|INDIGO|CHAPTERS|MICHAELS|HOBBY|TEMU|SHEIN|ALIEXPRESS|ETSY|EBAY|PAYPAL|SHOPIFY|APPLE STORE|THE SOURCE|LULULEMON|ROOTS|SIMONS|HUDSON'?S BAY|\bTHE BAY\b|GIANT TIGER|LONDON DRUGS|VISIONS|MEMORY EXPRESS|CANADA COMPUTERS|EB GAMES|GAMESTOP|\bMALL\b", "shopping"),
+    # --- more Canadian / Alberta names (only reached if nothing above matched) ---
+    (r"FRESON|EXTRA FOODS|SAVE ON FOODS|NATIONS FRESH|H ?MART|SUNTERRA|PLANET ORGANIC|COMMUNITY NATURAL|FARMERS'? MARKET|FOOD ?MART|SUPERMARKET|GROCERY|INSTACART|VOILA|PC EXPRESS|SPUD\.CA|FRESH ST|SUPERSTORE|SUPER C\b|MAXI\b|PROVIGO|LONGOS|FORTINOS|VALU-?MART|YOUR INDEPENDENT", "groceries"),
+    (r"ORIGINAL JOE|STATE ?& ?MAIN|\bCORA\b|RICKY'?S|CHIANTI|PIZZA ?73|PANAGO|LITTLE CAESAR|EDO JAPAN|MUCHO BURRITO|TACO TIME|BURGER BARON|WOK BOX|FAMOSO|NANDO|ARBY|CARL'?S JR|JOLLIBEE|PIZZA HUT|BUFFET|PIZZERIA|TAVERN|LOUNGE|SALOON|TAQUERIA|\bDELI\b|BAGEL|CREPE|BAR ?(&|AND) ?GRILL|NEW YORK FRIES|ORANGE JULIUS|CINNABON|SBARRO|MANCHU WOK|TEPPAN|HOT ?POT|DIM SUM|FANTUAN|RITUAL|HOOTERS|GRANITE|CHURCH'?S CHICKEN|WINGSTOP|QUESADA|BURRITO|GYRO|SOUVLAKI|DUMPLING|TERIYAKI|CURRY|TANDOOR|BUTTER CHICKEN|BANH MI|POKE\b|\bPHO\b|NOODLE|FISH ?& ?CHIPS|DINE|CATERING", "restaurants"),
+    (r"ON THE RUN|CANCO|PARKLAND|FLYING J|PETRO PASS|CARDLOCK|DOMO\b|RACE ?TRAC|HUSKY|ESSO", "gas"),
+    (r"KAL ?TIRE|TIRE ?(SHOP|CENTRE|CENTER|WAREHOUSE)|AUTO ?PARTS|CARWASH|CAR ?CARE|DETAIL|TOWING|AUTOBODY|AUTO BODY|MECHANIC|LUBE|OIL CHANGE|DEALERSHIP|\bMOTORS\b|\bGM\b|CHEV|DODGE|RAM TRUCK|HYUNDAI|KIA\b|MAZDA|NISSAN|SUBARU|VOLKSWAGEN|\bVW\b|ALBERTA REGISTR|REGISTRIES|LICEN[CS]E PLATE|PARKING", "auto"),
+    (r"LIFE ?MARK|MEDICENTRE|MEDI-?CENTRE|WALK-?IN|OPTOMETR|DENTURE|AUDIOLOG|HEARING|ORTHODONT|NATUROPATH|ACUPUNCT|RADIOLOG|X-?RAY|IMAGING|PHYSIOTHERAP|OPTICAL|VISION CENTRE|EYEWEAR|CONTACT LENS|1-800-CONTACTS|WELL\.CA", "health"),
+    (r"KITCHEN STUFF|BOUCLAIR|ASHLEY|DUFRESNE|MATTRESS|FURNITURE|APPLIANCE|TRUE VALUE|WINDOW|FLOORING|PAINT|SHERWIN|BENJAMIN MOORE|CLOVERDALE|GLASS|LOCKSMITH|ROOFING|FENCE|LANDSCAP|TREE SERVICE|SEPTIC|WATER SOFTEN|CULLIGAN", "home"),
+    (r"NYTIMES|GLOBE ?AND ?MAIL|GLOBEANDMAIL|POSTMEDIA|EDMONTON JOURNAL|SUBSTACK|MEDIUM\.COM|1PASSWORD|LASTPASS|NORDVPN|EXPRESSVPN|PROTON|OFFICE 365|MICROSOFT 365|CANVA|TIDAL|DEEZER|BRITBOX|APPLE TV|APPLE MUSIC|HBO|STARZ|FUBO|DUOLINGO|HEADSPACE|CALM\.COM|STRAVA|ZWIFT|NETFLIX|\bEA \*|RIOT GAMES|EPIC GAMES|ROBLOX|MINECRAFT|TWITCH", "subscriptions"),
+    (r"TOPGOLF|GOLF|DRIVING RANGE|BOWLING|ESCAPE ROOM|TRAMPOLINE|SKY ?ZONE|WEST EDMONTON MALL|\bWEM\b|GALAXYLAND|WORLD WATERPARK|CALAWAY|HERITAGE PARK|TELUS WORLD|ROYAL ALBERTA MUSEUM|STUBHUB|SEATGEEK|CINEMA|MOVIES|IMAX|LASER TAG|GO-?KART|PAINTBALL|CURLING|ARENA|RECREATION|REC CENTRE|AQUATIC|LEISURE|CAMPGROUND|PROVINCIAL PARK|PARKS CANADA|ALBERTA PARKS|FISHING|HUNTING|SPORTSMAN|CABELA|BASS PRO", "entertainment"),
+    (r"GIANT TIGER|COSTCO\.CA|WALMART\.CA|CANADIAN TIRE\.CA|BOOTS|SHOE|APPAREL|CLOTHING|BOUTIQUE|JEWEL|PANDORA|PEOPLES|BIRKS|CLAIRE'?S|SPENCER|BOOK|TOY|GAMES|ELECTRONICS|COMPUTER|CELL ?PHONE|OUTFITTER|SPORTING|SPORTS ?(STORE|SHOP)|BIKE|CYCLE|SKATE|TACKLE|CRAFT|FABRIC|PARTY|DOLLAR|THRIFT|VALUE VILLAGE|MARKETPLACE|SHOP\b|STORE\b|\bSP \*|SHOPIFY", "shopping"),
     (r"\bATM\b|\bABM\b|CASH WITHDRAWAL|WITHDRAWAL - CASH|WITHDRAWAL CASH|CASH ADV", "cash"),
     (r"\bFEES?\b|SERVICE CHARGE", "bankfees"),
     (r"OD INTEREST|INTEREST CHARGE|PURCHASE INTEREST|CASH ADVANCE INTEREST|\bINTEREST\b", "fees"),
     (r"\bCRA\b|CANADA REVENUE|REC(EIVER)? GEN|RECEIVER GENERAL|GOVT|GOVERNMENT|SERVICE ALBERTA|ALBERTA REG|PASSPORT|COURT|\bFINE\b|TICKET PAYMENT", "government"),
+    # card-machine codes, last resort: Toast and DoorDash are almost always food
+    (r"\bTST\*|\bTST \*|\bDD \*|DOORDASH", "restaurants"),
 ]
 COMPILED = [(re.compile(p), c) for p, c in RULES]
 
@@ -187,7 +200,59 @@ def categorize(txns, bills, settings):
             cat, why = "income", "money in"
         out.append({"id": tid, "date": t["date"], "desc": t["desc"], "amount": t["amount"],
                     "account": t["account"], "merchant": merchant, "mkey": mkey, "cat": cat, "why": why})
+    learn_from_you(out, settings)
     return out
+
+
+GENERIC = set("""store stores shop shops inc ltd limited corp co company canada canadian online services service
+centre center group the and of for llc enterprises enterprise holdings international intl north south east west
+alberta edmonton calgary red deer lacombe ponoka sylvan lake blackfalds""".split())
+
+
+def learn_from_you(out, settings):
+    """Sort leftover 'Other' purchases using words from the ones you sorted yourself.
+
+    A word is used only if it is reasonably distinctive (4+ letters, not a town or a
+    generic word), always pointed to the same category in your choices, and never shows
+    up in a purchase the built-in list put somewhere else. Your own choices are untouched."""
+    mine = defaultdict(lambda: defaultdict(set))   # word -> category -> payees you put there
+    elsewhere = defaultdict(set)                   # word -> categories the built-in list used
+    def words(r):
+        return {w for w in r["mkey"].split() if len(w) >= 4 and w not in GENERIC}
+    for r in out:
+        if r["why"] in ("you set this one", "your rule for this payee", "your keywords"):
+            for w in words(r):
+                mine[w][r["cat"]].add(r["merchant"])
+        elif r["why"] == "built-in list" and r["cat"] not in ("other", "income", "transfer", "cardpay"):
+            for w in words(r):
+                elsewhere[w].add(r["cat"])
+    weak, strong = {}, {}
+    for w, cats in mine.items():
+        if len(cats) != 1:
+            continue  # you've put this word in more than one category
+        cat, payees = next(iter(cats.items()))
+        others = elsewhere[w] - {cat}
+        if not others:
+            weak[w] = cat            # safe to fill in leftovers
+        if len(payees) >= 2 and len(others) <= 1:
+            strong[w] = cat          # you've corrected 2+ payees with this word: trust it over the built-in list
+    if not weak and not strong:
+        return
+    for r in out:
+        if r["why"] == "no match" and r["cat"] == "other":
+            table = {**weak, **strong}
+        elif r["why"] == "built-in list" and r["cat"] not in ("income", "transfer", "cardpay", "sent"):
+            table = strong
+        else:
+            continue
+        votes = defaultdict(int)
+        for w in words(r):
+            if w in table:
+                votes[table[w]] += 1
+        if votes:
+            best = max(votes, key=votes.get)
+            if best != r["cat"]:
+                r["cat"], r["why"] = best, "learned from your choices"
 
 
 def payload(txns, bills, settings, accounts):

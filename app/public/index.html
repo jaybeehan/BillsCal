@@ -906,7 +906,7 @@ function catItems(rows) {
 function renderSideTx(rows) {
   const box = $("#sideTx");
   if (!spSel.cat || !wide()) { box.innerHTML = ""; return; }
-  const its = catItems(rows), shown = Math.min(its.length, sideLimit);
+  const its = catItems(rows), shown = its.length;
   const total = its.reduce((s, r) => s - r.amount, 0);
   box.innerHTML = `<div class="side-h"><b>${esc(spSel.merchant ? prettyMerchant(its[0] || { merchant: spSel.merchant }) : catName(spSel.cat))} · ${its.length} purchase${its.length === 1 ? "" : "s"}</b><span class="num small muted">${money(total)}</span></div>` +
     its.slice(0, shown).map(miniTx).join("") +
@@ -925,7 +925,7 @@ function renderCatList(cats, prevByCat, prevCovered, totalAll, days, rows) {
     let below = "";
     if (spSel.cat === id && !wide()) {
       const its = catItems(rows);
-      below = `<div class="cat-x">${its.slice(0, 10).map(miniTx).join("")}<div class="small muted" style="padding:6px 4px">${its.length > 10 ? `${its.length - 10} more in Transactions below · ` : ""}tap one to change its category</div></div>`;
+      below = `<div class="cat-x">${its.map(miniTx).join("")}<div class="small muted" style="padding:6px 4px">tap one to change its category</div></div>`;
     }
     return `<button class="cat ${spSel.cat === id ? "on" : ""}" data-cat="${id}" aria-expanded="${spSel.cat === id}">
       <span class="nm">${esc(catName(id))}</span><span class="amt num">${money(v)}</span>
@@ -1035,7 +1035,7 @@ function renderMerchants(list) {
     const m = (by[r.merchant] ||= { v: 0, n: 0, r });
     m.v -= r.amount; if (r.amount < 0) m.n++;
   }
-  const top = Object.entries(by).filter(([, m]) => m.v > 0).sort((x, y) => y[1].v - x[1].v).slice(0, 10);
+  const top = Object.entries(by).filter(([, m]) => m.v > 0).sort((x, y) => y[1].v - x[1].v);
   $("#merchTitle").textContent = spSel.cat ? `Where ${catName(spSel.cat).toLowerCase()} went` : "Where it went";
   const txRow = (r) => `<div class="stx ${counted(r.cat) ? "" : "off"}" data-id="${r.id}">
     <div class="d num">${fmt(r.date, { month: "short", day: "numeric" })}</div>
@@ -1046,8 +1046,8 @@ function renderMerchants(list) {
     let inner = "";
     if (open && !(wide() && spSel.cat)) { // on wide screens with a category picked, the side list already shows these
       const its = list.filter((r) => r.merchant === k).sort((x, y) => (y.date > x.date ? 1 : -1));
-      inner = `<div class="mx">${its.slice(0, 8).map(txRow).join("")}
-        <div class="small muted" style="padding:6px 4px">${its.length > 8 ? `${its.length - 8} more in Transactions below · ` : ""}tap one to change its category</div></div>`;
+      inner = `<div class="mx">${its.map(txRow).join("")}
+        <div class="small muted" style="padding:6px 4px">tap one to change its category</div></div>`;
     }
     return `<button class="merch ${open ? "on" : ""}" data-m="${esc(k)}" aria-expanded="${open}">
     <span class="nm"><b>${esc(prettyMerchant(m.r))} <span aria-hidden="true">${open ? "▾" : "▸"}</span></b><span>${m.n} purchase${m.n === 1 ? "" : "s"}${spSel.cat ? "" : " · " + esc(catName(m.r.cat))}</span></span>
@@ -1103,7 +1103,7 @@ const postSpendBody = (body) => api("api/settings", { method: "POST", headers: {
 function recategorize(r) {
   const groups = [["spend", "Spending"], ["bills", "Bills"], ["none", "Not spending"]];
   const opts = groups.map(([g, l]) => `<optgroup label="${l}">${SP.categories.filter((c) => c.group === g).map((c) => `<option value="${c.id}" ${c.id === r.cat ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</optgroup>`).join("");
-  const why = { "you set this one": "You set this one yourself.", "your rule for this payee": "From your rule for this payee.", "recurring bill": "It's a recurring bill.", "built-in list": "Matched the built-in list.", "money in": "Money coming in.", "no match": "Didn't match anything, so it's Other.", "your keywords": "Matched one of your keywords.", "category removed": "Its category was removed, so it's Other." }[r.why] || "";
+  const why = { "you set this one": "You set this one yourself.", "your rule for this payee": "From your rule for this payee.", "recurring bill": "It's a recurring bill.", "built-in list": "Matched the built-in list.", "money in": "Money coming in.", "no match": "Didn't match anything, so it's Other.", "your keywords": "Matched one of your keywords.", "category removed": "Its category was removed, so it's Other.", "learned from your choices": "Guessed from how you've sorted similar purchases." }[r.why] || "";
   const scopes = ruleScopes(r).filter((s) => s.rows.length > 1);
   // default: the widest group only if everything in it is already in the same category (same kind of place);
   // otherwise the narrowest group, so "Wolf Creek" doesn't sweep up two different businesses
