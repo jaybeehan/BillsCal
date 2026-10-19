@@ -62,8 +62,11 @@ A separate look at where money goes, built from the same statements:
 - **Categories**: groceries, restaurants, coffee, gas, shopping, home, health, subscriptions, kids, etc.,
   from a built-in list of Canadian merchants. Tap a category to filter everything to it; tap a payee to
   narrow further.
-- **Fixing categories**: tap any transaction → pick a category → optionally apply it to every transaction
-  from that payee (now and future). *Automatic* undoes it.
+- **Fixing categories**: tap any transaction → pick a category → choose how far it applies: just this one,
+  or every transaction starting with the same words ("Wolf Creek…" vs "Wolf Creek Building…"), with examples
+  of what each would catch. The more specific rule wins. Every change shows an **Undo** for 10 seconds;
+  *Automatic* clears your rules for that payee (also undoable).
+- **Where it went**: tap a payee to open its transactions right there in the list.
 - **Manage categories**: add your own (with optional keywords, e.g. `GOLF, PRO SHOP`), rename any category,
   give any category keywords, or remove one (its transactions go back to automatic; built-ins can be restored).
   Bank fees (service charges, NSF, overdraft, foreign-exchange and e-transfer fees) have their own category,

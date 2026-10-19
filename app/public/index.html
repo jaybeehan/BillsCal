@@ -139,7 +139,16 @@ h2{font-size:15px;margin:0 0 10px;font-weight:700}
 .tx .ds span{display:block;font-size:12px;color:var(--muted)}
 /* misc */
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:12px;font-size:14px;z-index:60;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgba(0,0,0,.2);display:none}
-.toast.show{display:block}
+.toast.show{display:flex;align-items:center;gap:12px}
+.toast-act{background:none;border:0;color:var(--today);font-weight:750;text-transform:uppercase;letter-spacing:.03em;padding:4px 2px;cursor:pointer;flex:none}
+dialog label.scope{display:flex;flex-direction:row;gap:9px;align-items:flex-start;padding:8px 0;margin:0;border-top:1px solid var(--line);cursor:pointer;color:var(--ink);font-weight:400;font-size:14px}
+dialog label.scope:first-of-type{border-top:0}
+.scope input{margin-top:3px}
+.scope b{font-weight:600}
+.scope .ex{display:block;font-size:12px;color:var(--muted);font-family:var(--mono);word-break:break-all}
+.mx{margin:2px 0 8px 10px;padding-left:10px;border-left:2px solid var(--viz)}
+.mx .stx{grid-template-columns:52px 1fr auto;font-size:13px;padding:6px 4px}
+.mx .stx:first-child{border-top:0}
 .empty{text-align:center;padding:40px 16px}
 .empty h3{margin:0 0 6px;font-size:20px}
 dialog{border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);padding:18px;width:min(420px,calc(100% - 32px))}
@@ -401,8 +410,11 @@ async function api(p, opts = {}) {
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j;
 }
-function toast(msg, ms = 3200) {
-  const t = $("#toast"); t.innerHTML = msg; t.classList.add("show");
+function toast(msg, ms = 3200, action = null) {
+  const t = $("#toast");
+  t.innerHTML = msg + (action ? ` <button class="toast-act" type="button">${esc(action.label)}</button>` : "");
+  t.classList.add("show");
+  if (action) $(".toast-act", t).onclick = () => { t.classList.remove("show"); action.fn(); };
   clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), ms);
 }
 const acctName = (id) => (S.accounts.find((a) => a.id === id) || {}).label || "";
@@ -982,12 +994,26 @@ function renderMerchants(list) {
   }
   const top = Object.entries(by).filter(([, m]) => m.v > 0).sort((x, y) => y[1].v - x[1].v).slice(0, 10);
   $("#merchTitle").textContent = spSel.cat ? `Where ${catName(spSel.cat).toLowerCase()} went` : "Where it went";
-  $("#merchList").innerHTML = top.map(([k, m]) => `<button class="merch ${spSel.merchant === k ? "on" : ""}" data-m="${esc(k)}">
-    <span class="nm"><b>${esc(prettyMerchant(m.r))}</b><span>${m.n} purchase${m.n === 1 ? "" : "s"}${spSel.cat ? "" : " · " + esc(catName(m.r.cat))}</span></span>
-    <span class="amt num">${money(m.v)}</span></button>`).join("") || `<div class="muted small">Nothing here.</div>`;
+  const txRow = (r) => `<div class="stx ${counted(r.cat) ? "" : "off"}" data-id="${r.id}">
+    <div class="d num">${fmt(r.date, { month: "short", day: "numeric" })}</div>
+    <div class="ds"><b>${esc(r.desc)}</b><span><span class="chipcat">${esc(catName(r.cat))}</span>${esc(acctName(r.account))}</span></div>
+    <div class="a num ${r.amount > 0 ? "in" : ""}">${r.amount > 0 ? "+" : ""}${money(Math.abs(r.amount))}</div></div>`;
+  $("#merchList").innerHTML = top.map(([k, m]) => {
+    const open = spSel.merchant === k;
+    let inner = "";
+    if (open) {
+      const its = list.filter((r) => r.merchant === k).sort((x, y) => (y.date > x.date ? 1 : -1));
+      inner = `<div class="mx">${its.slice(0, 8).map(txRow).join("")}
+        <div class="small muted" style="padding:6px 4px">${its.length > 8 ? `${its.length - 8} more in Transactions below · ` : ""}tap one to change its category</div></div>`;
+    }
+    return `<button class="merch ${open ? "on" : ""}" data-m="${esc(k)}" aria-expanded="${open}">
+    <span class="nm"><b>${esc(prettyMerchant(m.r))} <span aria-hidden="true">${open ? "▾" : "▸"}</span></b><span>${m.n} purchase${m.n === 1 ? "" : "s"}${spSel.cat ? "" : " · " + esc(catName(m.r.cat))}</span></span>
+    <span class="amt num">${money(m.v)}</span></button>${inner}`;
+  }).join("") || `<div class="muted small">Nothing here.</div>`;
   $("#merchList").querySelectorAll(".merch").forEach((el) => el.onclick = () => {
-    spSel.merchant = spSel.merchant === el.dataset.m ? null : el.dataset.m; renderSpending();
+    spSel.merchant = spSel.merchant === el.dataset.m ? null : el.dataset.m; renderSpending(true);
   });
+  $("#merchList").querySelectorAll(".mx .stx").forEach((el) => el.onclick = () => recategorize(SP.rows.find((r) => r.id === el.dataset.id)));
 }
 
 // ---- transactions (tap one to change its category)
@@ -1018,30 +1044,70 @@ function renderSpendTx(rows) {
 let spQTimer;
 ["#spQ", "#spMin", "#spMax"].forEach((id) => $(id).oninput = () => { clearTimeout(spQTimer); spQTimer = setTimeout(() => renderSpending(), 200); });
 
+function ruleScopes(r) {
+  const words = (r.mkey || r.merchant).split(" ");
+  const pre = (row) => (row.mkey || row.merchant).split(" ");
+  const out = [];
+  for (let n = Math.min(2, words.length); n <= words.length; n++) {
+    const key = words.slice(0, n).join(" ");
+    const rows = SP.rows.filter((x) => pre(x).slice(0, n).join(" ") === key);
+    if (out.length && out[out.length - 1].rows.length === rows.length) continue; // same set as a shorter key
+    out.push({ key, rows, label: key.replace(/\b\w/g, (c) => c.toUpperCase()) });
+  }
+  return out;
+}
+const postSpendBody = (body) => api("api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ spend: body }) });
 function recategorize(r) {
   const groups = [["spend", "Spending"], ["bills", "Bills"], ["none", "Not spending"]];
   const opts = groups.map(([g, l]) => `<optgroup label="${l}">${SP.categories.filter((c) => c.group === g).map((c) => `<option value="${c.id}" ${c.id === r.cat ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</optgroup>`).join("");
-  const sameCount = SP.rows.filter((x) => x.merchant === r.merchant).length;
   const why = { "you set this one": "You set this one yourself.", "your rule for this payee": "From your rule for this payee.", "recurring bill": "It's a recurring bill.", "built-in list": "Matched the built-in list.", "money in": "Money coming in.", "no match": "Didn't match anything, so it's Other.", "your keywords": "Matched one of your keywords.", "category removed": "Its category was removed, so it's Other." }[r.why] || "";
+  const scopes = ruleScopes(r).filter((s) => s.rows.length > 1);
+  // default: the widest group only if everything in it is already in the same category (same kind of place);
+  // otherwise the narrowest group, so "Wolf Creek" doesn't sweep up two different businesses
+  let def = "one";
+  if (scopes.length) {
+    const wide = scopes[0];
+    def = new Set(wide.rows.map((x) => x.cat)).size === 1 ? wide.key : scopes[scopes.length - 1].key;
+  }
+  const examples = (rows) => [...new Set(rows.map((x) => x.desc))].slice(0, 3).map(esc).join("<br>");
+  const scopeHtml = `<label class="scope"><input type="radio" name="scope" value="one" ${def === "one" ? "checked" : ""}><span><b>Just this one</b></span></label>` +
+    scopes.map((s) => `<label class="scope"><input type="radio" name="scope" value="${esc(s.key)}" ${def === s.key ? "checked" : ""}>
+      <span><b>Every “${esc(s.label)}…”</b> <span class="muted small">${s.rows.length} now, and future ones</span><span class="ex">${examples(s.rows)}</span></span></label>`).join("");
   dialog(`<h2>Category</h2>
     <div class="small" style="margin-bottom:2px"><b>${esc(r.desc)}</b></div>
     <div class="small muted" style="margin-bottom:10px">${fmt(r.date, { month: "short", day: "numeric", year: "numeric" })} · ${money(Math.abs(r.amount))} · ${esc(why)}</div>
     <label>Category<select name="cat">${opts}</select></label>
     <div class="small" style="margin:-4px 0 10px"><button type="button" class="linkish" data-newcat>+ New category…</button></div>
-    <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-weight:500"><input type="checkbox" name="all" ${sameCount > 1 ? "checked" : ""}>
-      Also every “${esc(prettyMerchant(r))}” transaction${sameCount > 1 ? ` (${sameCount} now, and future ones)` : " in future"}</label>`,
+    <div class="small" style="font-weight:700;margin-bottom:2px">Apply to</div>
+    ${scopeHtml}`,
     async (f) => {
       const cat = f.cat.value;
-      const body = f.all.checked ? { rule_merchant: r.merchant, cat, tx_id: r.id, tx_cat: null } : { tx_id: r.id, cat };
-      await api("api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ spend: body }) });
+      const scope = [...f.scope].find((x) => x.checked)?.value || "one";
+      const prevTx = SP.tx[r.id] ?? null;
+      let body, undo;
+      if (scope === "one") {
+        body = { tx_id: r.id, cat };
+        undo = { tx_id: r.id, cat: prevTx };
+      } else {
+        body = { rules_set: { [scope]: cat }, tx_id: r.id, tx_cat: null };
+        undo = { rules_set: { [scope]: SP.rules[scope] ?? null }, tx_id: r.id, tx_cat: prevTx };
+      }
+      const n = scope === "one" ? 1 : scopes.find((s) => s.key === scope).rows.length;
+      await postSpendBody(body);
       await loadSpending(true);
-      toast(`Moved to ${esc(catName(cat))}`);
+      toast(`Moved ${n} to ${esc(catName(cat))}`, 10000, { label: "Undo", fn: async () => { await postSpendBody(undo); await loadSpending(true); toast("Undone"); } });
     }, `<button class="btn" type="button" data-reset>Automatic</button>`, (dlg) => {
       $("[data-newcat]", dlg).onclick = () => { dlg.close(); manageCats(); };
       $("[data-reset]", dlg).onclick = async () => {
         dlg.close();
-        await api("api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ spend: { rule_merchant: r.merchant, cat: null, tx_id: r.id, tx_cat: null } }) });
+        // clear any rule that could apply to this payee, and this transaction's own setting
+        const keys = ruleScopes(r).map((s) => s.key).concat([r.merchant]);
+        const clear = {}, restore = {};
+        for (const k of keys) { clear[k] = null; restore[k] = SP.rules[k] ?? null; }
+        const prevTx = SP.tx[r.id] ?? null;
+        await postSpendBody({ rules_set: clear, tx_id: r.id, tx_cat: null });
         await loadSpending(true);
+        toast("Back to automatic", 10000, { label: "Undo", fn: async () => { await postSpendBody({ rules_set: restore, tx_id: r.id, tx_cat: prevTx }); await loadSpending(true); toast("Undone"); } });
       };
     });
 }

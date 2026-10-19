@@ -107,7 +107,7 @@ RULES = [
     (r"NETFLIX|SPOTIFY|DISNEY|CRAVE|APPLE\.COM|APPLE COM|ITUNES|GOOGLE \*|GOOGLE PLAY|GOOGLE ONE|YOUTUBE|PRIME VIDEO|AMAZON PRIME|AMZN PRIME|PRIME MEMBER|MICROSOFT|XBOX|PLAYSTATION|SONY|NINTENDO|STEAM|PATREON|AUDIBLE|KINDLE|DROPBOX|ADOBE|ANTHROPIC|CLAUDE\.AI|OPENAI|CHATGPT|PARAMOUNT|SIRIUS|DAZN|SPORTSNET|\bTSN\b|PELOTON|ICLOUD|GITHUB|NAME-?CHEAP|GODADDY", "subscriptions"),
     (r"CINEPLEX|LANDMARK CINEMA|TICKETMASTER|EVENTBRITE|OILERS|ROGERS PLACE|FLAMES|LIVE NATION|GOLF|BOWL|ARCADE|MUSEUM|ZOO|WATERPARK|\bSKI\b|THEATRE|THEATER|CONCERT|CASINO|LOTTO|LOTTERY|AGLC|PLAYALBERTA", "entertainment"),
     (r"AIR CANADA|WESTJET|FLAIR|SWOOP|LYNX|PORTER|SUNWING|TRANSAT|EXPEDIA|BOOKING\.COM|HOTELS\.COM|AIRBNB|HOTEL|MOTEL|\bINN\b|RESORT|MARRIOTT|HILTON|SANDMAN|BEST WESTERN|HOLIDAY INN|SUPER 8|TRAVEL|AIRPORT|YEG|YYC|DUTY FREE|ROYALTON|ENTERPRISE RENT|BUDGET RENT|HERTZ|AVIS|NATIONAL CAR", "travel"),
-    (r"HOME DEPOT|HOMEDEPOT|RONA|LOWE'?S|CANADIAN TIRE|CDN TIRE|IKEA|PEAVEY|PRINCESS AUTO|HOME HARDWARE|TSC STORES|\bKENT\b|STRUCTUBE|WAYFAIR|BED BATH|HOMESENSE|HOME SENSE|LEON'?S|THE BRICK|SLEEP COUNTRY|GARDEN|GREENHOUSE|NURSERY|HARDWARE|LUMBER|PLUMB|HVAC|FURNACE|ELECTRICIAN|LAWN|SNOW|PEST|CLEANING", "home"),
+    (r"BUILDING SUPPL|BLDG SUPPL|HOME DEPOT|HOMEDEPOT|RONA|LOWE'?S|CANADIAN TIRE|CDN TIRE|IKEA|PEAVEY|PRINCESS AUTO|HOME HARDWARE|TSC STORES|\bKENT\b|STRUCTUBE|WAYFAIR|BED BATH|HOMESENSE|HOME SENSE|LEON'?S|THE BRICK|SLEEP COUNTRY|GARDEN|GREENHOUSE|NURSERY|HARDWARE|LUMBER|PLUMB|HVAC|FURNACE|ELECTRICIAN|LAWN|SNOW|PEST|CLEANING", "home"),
     (r"UBER(?! ?EATS)|LYFT|TAXI|\bCAB\b|PARKING|IMPARK|INDIGO PARK|PARK ?PLUS|TRANSIT|\bETS\b|CALGARY TRANSIT|CAR WASH|AUTOWASH|JIFFY|MR\.? LUBE|LUBE|TIRE|KAL TIRE|OK TIRE|FOUNTAIN TIRE|MIDAS|HONDA|TOYOTA|\bFORD\b|AUTO|REGISTRY|\bAMA\b|ALBERTA MOTOR|AUTOMOTIVE|COLLISION|NAPA|PART SOURCE|PARTSOURCE|CARQUEST", "auto"),
     (r"SHOPPERS DRUG|SHOPPERS|REXALL|LONDON DRUGS|PHARMA|PHARMACY|DRUG MART|DRUGS|GUARDIAN|PHARMASAVE|DENTAL|DENTIST|ORTHO|OPTOM|EYE ?CARE|VISIONMAX|SPECSAVERS|CLEARLY|PHYSIO|CHIRO|MASSAGE|CLINIC|MEDICAL|HOSPITAL|\bLAB\b|DYNALIFE|PSYCH|COUNSEL|WELLNESS", "health"),
     (r"PETSMART|PET VALU|GLOBAL PET|PETLAND|\bPETS?\b|\bVET\b|VETERINAR|ANIMAL HOSP|BOSLEY", "pets"),
@@ -149,12 +149,20 @@ def categorize(txns, bills, settings):
         n = seen.get(base, 0)
         seen[base] = n + 1
         tid = txn_id(t, n)
-        # payee = first two words, so "Costco Wholesale Red Deer" and "Costco Wholesale" group together
-        merchant = " ".join(A.merchant_key(t["desc"]).split()[:2]) or "unknown"
+        # payee = first two words, so "Costco Wholesale Red Deer" and "Costco Wholesale" group together;
+        # mkey keeps up to four words so a rule can be narrower ("wolf creek building" vs "wolf creek school")
+        words = A.merchant_key(t["desc"]).split()
+        merchant = " ".join(words[:2]) or "unknown"
+        mkey = " ".join(words[:4]) or merchant
         why = "you set this one"
         cat = tx_over.get(tid)
         if cat not in valid:
-            cat, why = rules.get(merchant), "your rule for this payee"
+            # the most specific rule wins: 4 words, then 3, then 2
+            for n in (4, 3, 2, 1):
+                k = " ".join(words[:n])
+                if k and rules.get(k) in valid:
+                    cat, why = rules[k], "your rule for this payee"
+                    break
         if cat not in valid:
             cat, why = user_keyword_category(t["desc"], settings, valid), "your keywords"
         if cat not in valid:
@@ -178,7 +186,7 @@ def categorize(txns, bills, settings):
                 and not re.search(r"REFUND|RETURN|REVERS|RFND|CREDIT ADJ|RBT|REBATE", t["desc"], re.I):
             cat, why = "income", "money in"
         out.append({"id": tid, "date": t["date"], "desc": t["desc"], "amount": t["amount"],
-                    "account": t["account"], "merchant": merchant, "cat": cat, "why": why})
+                    "account": t["account"], "merchant": merchant, "mkey": mkey, "cat": cat, "why": why})
     return out
 
 
@@ -191,6 +199,7 @@ def payload(txns, bills, settings, accounts):
         "include_bills": bool(sp.get("include_bills", False)),
         "hidden": [c for c in sp.get("hidden", []) if c in valid_ids(settings)],
         "rules": sp.get("rules", {}),
+        "tx": sp.get("tx", {}),
         "rows": rows,
         "accounts": [{"id": a["id"], "label": a["label"], "first": a["first"], "last": a["last"],
                       "ignore": a["ignore"]} for a in accounts],

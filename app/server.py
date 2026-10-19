@@ -423,6 +423,14 @@ class Handler(BaseHTTPRequestHandler):
                         rules[str(x["rule_merchant"])[:80]] = x["cat"]
                     else:
                         rules.pop(str(x["rule_merchant"])[:80], None)
+                if isinstance(x.get("rules_set"), dict):
+                    rules = sp.setdefault("rules", {})
+                    for k, v in list(x["rules_set"].items())[:20]:
+                        k = str(k)[:80]
+                        if v in valid:
+                            rules[k] = v
+                        else:
+                            rules.pop(k, None)
                 if x.get("tx_id"):
                     tx = sp.setdefault("tx", {})
                     tc = x.get("tx_cat", x.get("cat"))
