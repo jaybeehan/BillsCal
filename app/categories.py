@@ -34,7 +34,8 @@ CATEGORIES = [
     ("gifts", "Gifts & donations", "spend"),
     ("sent", "E-transfers sent", "spend"),
     ("cash", "Cash", "spend"),
-    ("fees", "Fees & interest", "spend"),
+    ("bankfees", "Bank fees", "spend"),
+    ("fees", "Interest charges", "spend"),
     ("government", "Government & taxes", "spend"),
     ("other", "Other", "spend"),
     ("housing", "Housing", "bills"),
@@ -48,12 +49,45 @@ CATEGORIES = [
 ]
 CAT_IDS = {c[0] for c in CATEGORIES}
 GROUP = {c[0]: c[2] for c in CATEGORIES}
+SYSTEM = {"other", "transfer", "cardpay", "income"}  # can be renamed, not removed
+
+
+def cat_list(settings):
+    """Built-in categories (renamed / removed as you set) plus your own."""
+    sp = settings.get("spend", {})
+    names, removed = sp.get("names", {}), set(sp.get("removed", []))
+    out = [{"id": c, "name": names.get(c) or n, "group": g, "builtin": True, "system": c in SYSTEM}
+           for c, n, g in CATEGORIES if c not in removed or c in SYSTEM]
+    for x in sp.get("custom", []):
+        out.append({"id": x["id"], "name": names.get(x["id"]) or x["name"], "group": x.get("group", "spend"),
+                    "builtin": False, "system": False})
+    kw = sp.get("keywords", {})
+    for x in out:
+        x["keywords"] = kw.get(x["id"], "")
+    return out
+
+
+def valid_ids(settings):
+    return {c["id"] for c in cat_list(settings)}
+
+
+def user_keyword_category(desc, settings, valid):
+    d = str(desc).upper()
+    for cid, text in settings.get("spend", {}).get("keywords", {}).items():
+        if cid not in valid:
+            continue
+        for w in str(text).split(","):
+            w = w.strip().upper()
+            if w and w in d:
+                return cid
+    return None
 
 # (regex on the upper-cased description, category). First match wins, so specific
 # patterns (COSTCO GAS) sit above general ones (COSTCO).
 RULES = [
     # never-spending first
     (r"PAYMENT.{0,12}THANK YOU|PAIEMENT.{0,6}MERCI|PAYMENT RECEIVED|AUTOPAY|PAYMENT - THANK", "cardpay"),
+    (r"SERVICE CHARGE|MONTHLY (ACCOUNT |PLAN )?FEE|ACCOUNT FEE|ANNUAL FEE|PLAN FEE|\bNSF\b|OVERDRAFT (FEE|HANDLING|PROTECTION)|OD (FEE|HANDLING)|FOREIGN (EXCHANGE|TRANSACTION|CURRENCY) (FEE|CONVERSION)|E-?TRANSFER FEE|E-?TFR FEE|INTERAC FEE|(ATM|ABM) FEE|NON-?(TD|RBC|BMO)? ?(ATM|ABM)|NETWORK (ATM|ABM)|STOP PAYMENT|DRAFT FEE|CHEQUE (ORDER|FEE)|PAPER STATEMENT|STATEMENT FEE|RETURNED ITEM|ITEM FEE|TRANSACTION FEE|EXCESS (TRANSACTION|DEBIT)|MONTHLY PLAN|\bMNTHLY\b|LOW BALANCE|SAFETY DEPOSIT|SAFE DEPOSIT|CASH ADVANCE FEE|BALANCE TRANSFER FEE|LATE (PAYMENT )?FEE|OVERLIMIT|OVER LIMIT", "bankfees"),
     (r"E-?TRANSFER.{0,20}(SENT|SEND|ENVOI)|SEND E-?TFR|INTERAC E-?TRANSFER TO|E-TFR TO|ETRANSFER SENT", "sent"),
     (r"E-?TRANSFER|E-?TFR|AUTODEPOSIT|INTERAC.{0,10}(RECEIVED|DEPOSIT)", "income"),
     (r"PAYROLL|PAY ?ROLL|SALARY|DIRECT DEP|\bDIR DEP|CANADA (CHILD|CCB)|CCB\b|GST ?CREDIT|GST/HST|CANADA FED|FED(ERAL)? REFUND|TAX REFUND|INTEREST (EARNED|PAID TO)", "income"),
@@ -81,7 +115,8 @@ RULES = [
     (r"CANADAHELPS|CHARITY|DONATION|FOUNDATION|UNITED WAY|RED CROSS|SALVATION ARMY|CHURCH|PARISH|GOFUNDME|FLOWERS|FLORIST|1-800-FLOWERS|HALLMARK|GIFT", "gifts"),
     (r"AMAZON|AMZN|BEST BUY|BESTBUY|STAPLES|WINNERS|MARSHALLS|SPORT ?CHEK|ATMOSPHERE|MARK'?S|OLD NAVY|\bGAP\b|H ?& ?M|ZARA|UNIQLO|AMERICAN EAGLE|ARDENE|SKECHERS|FOOTLOCKER|FOOT LOCKER|SPORT ?EXPERTS|DOLLARAMA|DOLLAR TREE|DOLLAR|INDIGO|CHAPTERS|MICHAELS|HOBBY|TEMU|SHEIN|ALIEXPRESS|ETSY|EBAY|PAYPAL|SHOPIFY|APPLE STORE|THE SOURCE|LULULEMON|ROOTS|SIMONS|HUDSON'?S BAY|\bTHE BAY\b|GIANT TIGER|LONDON DRUGS|VISIONS|MEMORY EXPRESS|CANADA COMPUTERS|EB GAMES|GAMESTOP|\bMALL\b", "shopping"),
     (r"\bATM\b|\bABM\b|CASH WITHDRAWAL|WITHDRAWAL - CASH|WITHDRAWAL CASH|CASH ADV", "cash"),
-    (r"SERVICE CHARGE|MONTHLY FEE|ACCOUNT FEE|ANNUAL FEE|PLAN FEE|NSF|OVERDRAFT|OD INTEREST|INTEREST CHARGE|PURCHASE INTEREST|CASH ADVANCE INTEREST|FOREIGN (EXCHANGE|TRANSACTION) FEE|\bFEE\b|INTEREST", "fees"),
+    (r"\bFEES?\b|SERVICE CHARGE", "bankfees"),
+    (r"OD INTEREST|INTEREST CHARGE|PURCHASE INTEREST|CASH ADVANCE INTEREST|\bINTEREST\b", "fees"),
     (r"\bCRA\b|CANADA REVENUE|REC(EIVER)? GEN|RECEIVER GENERAL|GOVT|GOVERNMENT|SERVICE ALBERTA|ALBERTA REG|PASSPORT|COURT|\bFINE\b|TICKET PAYMENT", "government"),
 ]
 COMPILED = [(re.compile(p), c) for p, c in RULES]
@@ -106,6 +141,7 @@ def categorize(txns, bills, settings):
     tx_over = sp.get("tx", {})
     rules = sp.get("rules", {})
     bill_keys = {" ".join(b["key"].split()[:2]) for b in bills if b.get("include")}
+    valid = valid_ids(settings)
     seen = {}
     out = []
     for t in txns:
@@ -117,9 +153,11 @@ def categorize(txns, bills, settings):
         merchant = " ".join(A.merchant_key(t["desc"]).split()[:2]) or "unknown"
         why = "you set this one"
         cat = tx_over.get(tid)
-        if cat not in CAT_IDS:
+        if cat not in valid:
             cat, why = rules.get(merchant), "your rule for this payee"
-        if cat not in CAT_IDS:
+        if cat not in valid:
+            cat, why = user_keyword_category(t["desc"], settings, valid), "your keywords"
+        if cat not in valid:
             cat, why = None, "built-in list"
             if A.is_internal(t):
                 cat = "transfer"
@@ -129,11 +167,14 @@ def categorize(txns, bills, settings):
                 cat = keyword_category(t["desc"])
             if cat is None and merchant in bill_keys:
                 cat, why = "billsvc", "recurring bill"
+            if cat is not None and cat not in valid:
+                cat, why = None, "category removed"
             if cat is None:
-                cat, why = ("income", "money in") if t["amount"] > 0 and t["kind"] == "bank" else ("other", "no match")
+                cat, why = ("income", "money in") if t["amount"] > 0 and t["kind"] == "bank" else \
+                    ("other", why if why == "category removed" else "no match")
         # Money into chequing that matched a shop by name is only a refund if it says so;
         # otherwise it's income (stops "HEALTH SERVICES PAYROLL" landing in Health).
-        if why == "built-in list" and t["amount"] > 0 and t["kind"] == "bank" and GROUP.get(cat) != "none" \
+        if why in ("built-in list", "your keywords") and t["amount"] > 0 and t["kind"] == "bank" and GROUP.get(cat) != "none" \
                 and not re.search(r"REFUND|RETURN|REVERS|RFND|CREDIT ADJ|RBT|REBATE", t["desc"], re.I):
             cat, why = "income", "money in"
         out.append({"id": tid, "date": t["date"], "desc": t["desc"], "amount": t["amount"],
@@ -145,9 +186,10 @@ def payload(txns, bills, settings, accounts):
     sp = settings.get("spend", {})
     rows = categorize(txns, bills, settings)
     return {
-        "categories": [{"id": c, "name": n, "group": g} for c, n, g in CATEGORIES],
+        "categories": cat_list(settings),
+        "removed": [{"id": c, "name": n} for c, n, g in CATEGORIES if c in set(sp.get("removed", [])) and c not in SYSTEM],
         "include_bills": bool(sp.get("include_bills", False)),
-        "hidden": [c for c in sp.get("hidden", []) if c in CAT_IDS],
+        "hidden": [c for c in sp.get("hidden", []) if c in valid_ids(settings)],
         "rules": sp.get("rules", {}),
         "rows": rows,
         "accounts": [{"id": a["id"], "label": a["label"], "first": a["first"], "last": a["last"],

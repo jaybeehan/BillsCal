@@ -157,6 +157,18 @@ dialog input,dialog select{border:1px solid var(--line);background:var(--bg);bor
 .ranges button{flex:none;border:1px solid var(--line);background:var(--card);border-radius:99px;padding:6px 12px;font-weight:600;font-size:13.5px;color:var(--muted)}
 .ranges button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .custom-range{display:flex;gap:10px;margin-bottom:10px}
+.searchrow{display:flex;gap:8px;align-items:flex-end;margin-bottom:10px}
+.searchrow .search{flex:1;margin:0;min-width:0}
+.amt-in{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--muted);font-weight:600;width:84px;flex:none}
+.amt-in input{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 9px;color:var(--ink);width:100%;box-sizing:border-box;font-variant-numeric:tabular-nums}
+@media (max-width:480px){.searchrow{flex-wrap:wrap}.searchrow .search{flex-basis:100%}.amt-in{flex:1;width:auto}}
+.mc{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.mc:first-child{border-top:0}
+.mc .nm{flex:1;min-width:0;text-align:left}
+.mc .nm b{display:block;font-weight:600}
+.mc .nm span{font-size:12px;color:var(--muted)}
+.mc-list{max-height:34vh;overflow:auto;margin:6px 0 12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+dialog{max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box}
 .custom-range label{flex:1;display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);font-weight:600}
 .custom-range input{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:8px 9px;color:var(--ink)}
 .cover-note{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:8px 11px;margin-bottom:10px}
@@ -338,7 +350,7 @@ dialog input,dialog select{border:1px solid var(--line);background:var(--bg);bor
       </div>
       <div class="two even">
         <div class="card">
-          <div class="chart-head"><h2>Categories</h2><button class="btn small ghost" id="whatCounts">What counts?</button></div>
+          <div class="chart-head"><h2>Categories</h2><span><button class="btn small ghost" id="manageCats">Manage</button><button class="btn small ghost" id="whatCounts">What counts?</button></span></div>
           <div id="catList"></div>
           <div id="notCounted" class="not-counted small muted"></div>
         </div>
@@ -349,7 +361,11 @@ dialog input,dialog select{border:1px solid var(--line);background:var(--bg);bor
       </div>
       <div class="card" style="margin-top:14px">
         <div class="chart-head"><h2 id="txTitle">Transactions</h2></div>
-        <input class="search" id="spQ" placeholder="Search all transactions…" type="search">
+        <div class="searchrow">
+          <input class="search" id="spQ" placeholder="Search all transactions…" type="search">
+          <label class="amt-in"><span>$ from</span><input id="spMin" inputmode="decimal" placeholder="0"></label>
+          <label class="amt-in"><span>$ to</span><input id="spMax" inputmode="decimal" placeholder="any"></label>
+        </div>
         <div id="spTx"></div>
         <div id="spTxMore" class="muted small" style="padding-top:8px"></div>
       </div>
@@ -500,6 +516,7 @@ function renderBills() {
     <label>Every how many days<input name="every" inputmode="numeric" value="${p.every || 14}"></label>`,
     async (f) => { await saveSettings({ pay: { anchor: f.anchor.value, amount: f.amount.value, every: f.every.value } }); },
     `<button class="btn" type="button" data-reset>Use detected</button>`, (dlg) => {
+      $("[data-newcat]", dlg).onclick = () => { dlg.close(); manageCats(); };
       $("[data-reset]", dlg).onclick = async () => { dlg.close(); await saveSettings({ pay: { anchor: "", amount: "", every: "" } }); };
     });
 
@@ -907,6 +924,55 @@ $("#whatCounts").onclick = () => {
     });
 };
 
+// ---- add / rename / remove categories
+const postSpend = (body) => api("api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ spend: body }) });
+const groupLabel = { spend: "Spending", bills: "Bill", none: "Not spending" };
+function manageCats() {
+  const counts = {};
+  for (const r of SP.rows) counts[r.cat] = (counts[r.cat] || 0) + 1;
+  const row = (c) => `<div class="mc"><button type="button" class="nm linkish" data-edit="${c.id}" style="text-decoration:none">
+      <b>${esc(c.name)}</b><span>${groupLabel[c.group]}${c.builtin ? "" : " · yours"} · ${counts[c.id] || 0} transactions${c.keywords ? ` · words: ${esc(c.keywords)}` : ""}</span></button>
+      ${c.system ? "" : `<button type="button" class="btn small ghost" data-rm="${c.id}" aria-label="Remove ${esc(c.name)}">Remove</button>`}</div>`;
+  dialog(`<h2>Categories</h2>
+    <div class="small muted">Tap a name to rename it or give it keywords. Removing a category moves its transactions back to automatic (usually Other).</div>
+    <div class="mc-list">${SP.categories.map(row).join("")}
+      ${SP.removed.length ? `<div class="small muted" style="margin-top:10px;font-weight:700">Removed built-ins</div>` + SP.removed.map((c) => `<div class="mc"><span class="nm">${esc(c.name)}</span><button type="button" class="btn small" data-restore="${c.id}">Restore</button></div>`).join("") : ""}</div>
+    <div class="small" style="font-weight:700;margin-bottom:6px">Add a category</div>
+    <label>Name<input name="name" placeholder="e.g. Golf"></label>
+    <label>Keywords (optional, comma separated)<input name="kw" placeholder="e.g. GOLF, LINKS, PRO SHOP"></label>
+    <label>Counts as<select name="group"><option value="spend">Spending</option><option value="bills">Bill</option></select></label>`,
+    async (f) => {
+      if (!f.name.value.trim()) return;
+      try { await postSpend({ add_cat: { name: f.name.value, keywords: f.kw.value, group: f.group.value } }); toast(`Added ${esc(f.name.value.trim())}`); }
+      catch (e) { toast(esc(e.message)); }
+      await loadSpending(true); manageCats();
+    }, "", (dlg) => {
+      dlg.querySelectorAll("[data-rm]").forEach((b) => b.onclick = async () => {
+        const c = SP.categories.find((x) => x.id === b.dataset.rm);
+        if (!confirm(`Remove ${c.name}? Its ${counts[c.id] || 0} transactions go back to automatic.`)) return;
+        dlg.close();
+        try { await postSpend({ remove_cat: c.id }); } catch (e) { toast(esc(e.message)); }
+        if (spSel.cat === c.id) spSel.cat = null;
+        await loadSpending(true); manageCats();
+      });
+      dlg.querySelectorAll("[data-restore]").forEach((b) => b.onclick = async () => {
+        dlg.close(); await postSpend({ restore_cat: b.dataset.restore }); await loadSpending(true); manageCats();
+      });
+      dlg.querySelectorAll("[data-edit]").forEach((b) => b.onclick = () => { dlg.close(); editCat(SP.categories.find((x) => x.id === b.dataset.edit)); });
+    }, "Add");
+}
+function editCat(c) {
+  dialog(`<h2>${esc(c.name)}</h2>
+    <label>Name<input name="name" value="${esc(c.name)}" required></label>
+    <label>Keywords (comma separated)<input name="kw" value="${esc(c.keywords || "")}" placeholder="words in the bank description"></label>
+    <div class="small muted" style="margin-bottom:8px">Any transaction whose description contains one of these words goes here, unless you've set it by hand or with a payee rule.</div>`,
+    async (f) => {
+      await postSpend({ rename: { id: c.id, name: f.name.value }, keywords: { id: c.id, text: f.kw.value } });
+      await loadSpending(true); manageCats();
+    }, `<button class="btn" type="button" data-back>Back</button>`, (dlg) => { $("[data-back]", dlg).onclick = () => { dlg.close(); manageCats(); }; });
+}
+$("#manageCats").onclick = () => manageCats();
+
 // ---- payees
 function renderMerchants(list) {
   const by = {};
@@ -927,33 +993,41 @@ function renderMerchants(list) {
 // ---- transactions (tap one to change its category)
 function renderSpendTx(rows) {
   const q = $("#spQ").value.trim().toLowerCase();
-  // a search looks through everything you have, not just this range
-  let list = q ? SP.rows.filter((r) => r.desc.toLowerCase().includes(q) || String(Math.abs(r.amount)).includes(q) || catName(r.cat).toLowerCase().includes(q))
+  const num = (v) => { const n = parseFloat(String(v).replace(/[$,\s]/g, "")); return isNaN(n) ? null : n; };
+  const lo = num($("#spMin").value), hi = num($("#spMax").value);
+  const byAmount = lo !== null || hi !== null;
+  const amtOk = (r) => { const a = Math.abs(r.amount); return (lo === null || a >= lo - 0.005) && (hi === null || a <= hi + 0.005); };
+  const textOk = (r) => !q || r.desc.toLowerCase().includes(q) || String(Math.abs(r.amount)).includes(q) || catName(r.cat).toLowerCase().includes(q);
+  // a search (words or a dollar range) looks through everything you have: all dates, all categories
+  let list = q || byAmount ? SP.rows.filter((r) => textOk(r) && amtOk(r))
     : rows.filter((r) => (!spSel.cat || r.cat === spSel.cat) && (!spSel.merchant || r.merchant === spSel.merchant));
   list = list.slice().sort((x, y) => (y.date > x.date ? 1 : y.date < x.date ? -1 : 0));
-  $("#txTitle").textContent = q ? "Search results" : spSel.merchant ? prettyMerchant(list[0] || { merchant: spSel.merchant }) : spSel.cat ? catName(spSel.cat) : "Transactions";
+  $("#txTitle").textContent = q || byAmount ? `Search results${byAmount ? ` · ${lo !== null ? money0(lo) : "$0"} to ${hi !== null ? money0(hi) : "any"}` : ""}` : spSel.merchant ? prettyMerchant(list[0] || { merchant: spSel.merchant }) : spSel.cat ? catName(spSel.cat) : "Transactions";
   const shown = Math.min(list.length, spTxLimit);
   $("#spTx").innerHTML = list.slice(0, shown).map((r) => `<div class="stx ${counted(r.cat) ? "" : "off"}" data-id="${r.id}">
     <div class="d num">${fmt(r.date, { month: "short", day: "numeric" })}${r.date.slice(0, 4) !== S.today.slice(0, 4) ? `<br>${r.date.slice(0, 4)}` : ""}</div>
     <div class="ds"><b>${esc(r.desc)}</b><span><span class="chipcat">${esc(catName(r.cat))}</span>${esc(acctName(r.account))}</span></div>
     <div class="a num ${r.amount > 0 ? "in" : ""}">${r.amount > 0 ? "+" : ""}${money(Math.abs(r.amount))}</div></div>`).join("") || `<div class="muted small">Nothing found.</div>`;
   $("#spTxMore").innerHTML = (list.length > shown ? `<button class="btn small" id="spMore">Show more</button> ` : "") +
-    `${shown < list.length ? `${shown} of ` : ""}${list.length} transaction${list.length === 1 ? "" : "s"} · tap one to change its category`;
+    `${shown < list.length ? `${shown} of ` : ""}${list.length} transaction${list.length === 1 ? "" : "s"}` +
+    (q || byAmount ? (() => { const out = list.filter((r) => r.amount < 0).reduce((s, r) => s - r.amount, 0), inn = list.filter((r) => r.amount > 0).reduce((s, r) => s + r.amount, 0);
+      return ` · ${money(out)} out${inn ? ` · ${money(inn)} in` : ""} · all dates & categories`; })() : "") + " · tap one to change its category";
   if ($("#spMore")) $("#spMore").onclick = () => { spTxLimit += 50; renderSpendTx(rows); };
   $("#spTx").querySelectorAll(".stx").forEach((el) => el.onclick = () => recategorize(SP.rows.find((r) => r.id === el.dataset.id)));
 }
 let spQTimer;
-$("#spQ").oninput = () => { clearTimeout(spQTimer); spQTimer = setTimeout(() => renderSpending(), 150); };
+["#spQ", "#spMin", "#spMax"].forEach((id) => $(id).oninput = () => { clearTimeout(spQTimer); spQTimer = setTimeout(() => renderSpending(), 200); });
 
 function recategorize(r) {
   const groups = [["spend", "Spending"], ["bills", "Bills"], ["none", "Not spending"]];
   const opts = groups.map(([g, l]) => `<optgroup label="${l}">${SP.categories.filter((c) => c.group === g).map((c) => `<option value="${c.id}" ${c.id === r.cat ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</optgroup>`).join("");
   const sameCount = SP.rows.filter((x) => x.merchant === r.merchant).length;
-  const why = { "you set this one": "You set this one yourself.", "your rule for this payee": "From your rule for this payee.", "recurring bill": "It's a recurring bill.", "built-in list": "Matched the built-in list.", "money in": "Money coming in.", "no match": "Didn't match anything, so it's Other." }[r.why] || "";
+  const why = { "you set this one": "You set this one yourself.", "your rule for this payee": "From your rule for this payee.", "recurring bill": "It's a recurring bill.", "built-in list": "Matched the built-in list.", "money in": "Money coming in.", "no match": "Didn't match anything, so it's Other.", "your keywords": "Matched one of your keywords.", "category removed": "Its category was removed, so it's Other." }[r.why] || "";
   dialog(`<h2>Category</h2>
     <div class="small" style="margin-bottom:2px"><b>${esc(r.desc)}</b></div>
     <div class="small muted" style="margin-bottom:10px">${fmt(r.date, { month: "short", day: "numeric", year: "numeric" })} · ${money(Math.abs(r.amount))} · ${esc(why)}</div>
     <label>Category<select name="cat">${opts}</select></label>
+    <div class="small" style="margin:-4px 0 10px"><button type="button" class="linkish" data-newcat>+ New category…</button></div>
     <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-weight:500"><input type="checkbox" name="all" ${sameCount > 1 ? "checked" : ""}>
       Also every “${esc(prettyMerchant(r))}” transaction${sameCount > 1 ? ` (${sameCount} now, and future ones)` : " in future"}</label>`,
     async (f) => {
@@ -963,6 +1037,7 @@ function recategorize(r) {
       await loadSpending(true);
       toast(`Moved to ${esc(catName(cat))}`);
     }, `<button class="btn" type="button" data-reset>Automatic</button>`, (dlg) => {
+      $("[data-newcat]", dlg).onclick = () => { dlg.close(); manageCats(); };
       $("[data-reset]", dlg).onclick = async () => {
         dlg.close();
         await api("api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ spend: { rule_merchant: r.merchant, cat: null, tx_id: r.id, tx_cat: null } }) });

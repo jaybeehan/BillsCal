@@ -64,6 +64,12 @@ A separate look at where money goes, built from the same statements:
   narrow further.
 - **Fixing categories**: tap any transaction → pick a category → optionally apply it to every transaction
   from that payee (now and future). *Automatic* undoes it.
+- **Manage categories**: add your own (with optional keywords, e.g. `GOLF, PRO SHOP`), rename any category,
+  give any category keywords, or remove one (its transactions go back to automatic; built-ins can be restored).
+  Bank fees (service charges, NSF, overdraft, foreign-exchange and e-transfer fees) have their own category,
+  separate from interest charges.
+- **Search**: words and/or a dollar range (*$ from* / *$ to*) search every transaction you have, all dates and
+  categories, with a total for what's found.
 - **What counts?**: bills (housing, utilities, phone, insurance) are left out by default since the Bills tab
   covers them; transfers between your accounts, credit card payments and money in are never counted.
   Card purchases are counted on the card, not again when you pay the card off.

@@ -412,23 +412,63 @@ class Handler(BaseHTTPRequestHandler):
             if "spend" in b:
                 x = b["spend"]
                 sp = s.setdefault("spend", {})
+                valid = categories.valid_ids(s)
                 if "include_bills" in x:
                     sp["include_bills"] = bool(x["include_bills"])
                 if "hidden" in x:
-                    sp["hidden"] = [c for c in x["hidden"] if c in categories.CAT_IDS]
+                    sp["hidden"] = [c for c in x["hidden"] if c in valid]
                 if x.get("rule_merchant"):
                     rules = sp.setdefault("rules", {})
-                    if x.get("cat") in categories.CAT_IDS:
+                    if x.get("cat") in valid:
                         rules[str(x["rule_merchant"])[:80]] = x["cat"]
                     else:
                         rules.pop(str(x["rule_merchant"])[:80], None)
                 if x.get("tx_id"):
                     tx = sp.setdefault("tx", {})
                     tc = x.get("tx_cat", x.get("cat"))
-                    if tc in categories.CAT_IDS:
+                    if tc in valid:
                         tx[str(x["tx_id"])[:20]] = tc
                     else:
                         tx.pop(str(x["tx_id"])[:20], None)
+                if x.get("add_cat"):
+                    a = x["add_cat"]
+                    name = str(a.get("name", "")).strip()[:40]
+                    if not name:
+                        raise ValueError("Category needs a name")
+                    if any(c["name"].lower() == name.lower() for c in categories.cat_list(s)):
+                        raise ValueError(f"There's already a category called {name}")
+                    cid = "c-" + uuid.uuid4().hex[:8]
+                    sp.setdefault("custom", []).append({"id": cid, "name": name,
+                                                        "group": "bills" if a.get("group") == "bills" else "spend"})
+                    if str(a.get("keywords", "")).strip():
+                        sp.setdefault("keywords", {})[cid] = str(a["keywords"])[:400]
+                if x.get("rename"):
+                    r = x["rename"]
+                    name = str(r.get("name", "")).strip()[:40]
+                    if r.get("id") in valid and name:
+                        sp.setdefault("names", {})[r["id"]] = name
+                if "keywords" in x and x["keywords"].get("id") in valid:
+                    text = str(x["keywords"].get("text", "")).strip()[:400]
+                    kw = sp.setdefault("keywords", {})
+                    if text:
+                        kw[x["keywords"]["id"]] = text
+                    else:
+                        kw.pop(x["keywords"]["id"], None)
+                if x.get("remove_cat"):
+                    cid = x["remove_cat"]
+                    if cid in categories.SYSTEM or cid not in valid:
+                        raise ValueError("That category can't be removed")
+                    if cid in categories.CAT_IDS:
+                        sp.setdefault("removed", []).append(cid)
+                    sp["custom"] = [c for c in sp.get("custom", []) if c["id"] != cid]
+                    # anything pointing at it falls back to automatic
+                    sp["rules"] = {k: v for k, v in sp.get("rules", {}).items() if v != cid}
+                    sp["tx"] = {k: v for k, v in sp.get("tx", {}).items() if v != cid}
+                    sp["hidden"] = [h for h in sp.get("hidden", []) if h != cid]
+                    sp.get("keywords", {}).pop(cid, None)
+                    sp.get("names", {}).pop(cid, None)
+                if x.get("restore_cat"):
+                    sp["removed"] = [c for c in sp.get("removed", []) if c != x["restore_cat"]]
             if "manual_update" in b:
                 u = b["manual_update"]
                 for m in s.get("manual_bills", []):
