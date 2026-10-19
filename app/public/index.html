@@ -908,7 +908,7 @@ function catItems(rows) {
 // wide screens: the selected category's purchases sit in the right-hand panel, which stays in view
 function renderSideTx(rows) {
   const box = $("#sideTx");
-  if (!spSel.cat || !wide() || spSel.merchant) { box.innerHTML = ""; return; }
+  box.innerHTML = ""; return; // payees stay collapsed until tapped; each opens in place
   const its = catItems(rows), shown = its.length;
   const total = its.reduce((s, r) => s - r.amount, 0);
   box.innerHTML = `<div class="side-h"><b>${esc(spSel.merchant ? prettyMerchant(its[0] || { merchant: spSel.merchant }) : catName(spSel.cat))} · ${its.length} purchase${its.length === 1 ? "" : "s"}</b><span class="num small muted">${money(total)}</span></div>` +
