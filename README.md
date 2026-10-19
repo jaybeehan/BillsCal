@@ -67,6 +67,8 @@ A separate look at where money goes, built from the same statements:
   of what each would catch. The more specific rule wins. Every change shows an **Undo** for 10 seconds;
   *Automatic* clears your rules for that payee (also undoable).
 - **Where it went**: tap a payee to open its transactions right there in the list.
+  Tapping a category shows its purchases without scrolling: in the right-hand panel, which stays in view
+  on a computer, or right under the category on a phone.
 - **Manage categories**: add your own (with optional keywords, e.g. `GOLF, PRO SHOP`), rename any category,
   give any category keywords, or remove one (its transactions go back to automatic; built-ins can be restored).
   Bank fees (service charges, NSF, overdraft, foreign-exchange and e-transfer fees) have their own category,

@@ -227,6 +227,14 @@ dialog{max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box}
 .stx.off .a{color:var(--muted);font-weight:500}
 .chipcat{display:inline-block;background:var(--sunk);border-radius:5px;padding:0 5px;margin-right:4px;color:var(--ink);font-size:11.5px}
 .two.even{grid-template-columns:1fr 1fr}
+@media (min-width:861px){
+  .two.even>.card.side{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;overscroll-behavior:contain}
+}
+.side-h{display:flex;justify-content:space-between;align-items:baseline;margin:14px 0 2px;padding-top:12px;border-top:1px solid var(--line)}
+.side-h b{font-size:14px}
+.cat-x{margin:0 0 8px 10px;padding-left:10px;border-left:2px solid var(--viz)}
+.cat-x .stx{grid-template-columns:52px 1fr auto;font-size:13px;padding:6px 4px}
+.cat-x .stx:first-child{border-top:0}
 @media (max-width:860px){.two.even{grid-template-columns:1fr}}
 .dlg-cats{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;max-height:50vh;overflow:auto;margin:6px 0 10px}
 .dlg-cats label{flex-direction:row!important;align-items:center;gap:7px!important;color:var(--ink)!important;font-weight:500!important;margin:0!important;font-size:14px!important}
@@ -363,9 +371,10 @@ dialog{max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box}
           <div id="catList"></div>
           <div id="notCounted" class="not-counted small muted"></div>
         </div>
-        <div class="card">
+        <div class="card side" id="sidePanel">
           <h2 id="merchTitle">Where it went</h2>
           <div id="merchList"></div>
+          <div id="sideTx"></div>
         </div>
       </div>
       <div class="card" style="margin-top:14px">
@@ -790,9 +799,10 @@ function renderSpending(keepLimit) {
   }
 
   renderSpendChart(a, b, focusRows, dataFirst, dataLast);
-  renderCatList(cats, prevByCat, prevCovered, totalAll, days);
+  renderCatList(cats, prevByCat, prevCovered, totalAll, days, rows);
   renderNotCounted(rows);
   renderMerchants(rows.filter((r) => (spSel.cat ? r.cat === spSel.cat : counted(r.cat))));
+  renderSideTx(rows);
   renderSpendTx(rows);
   $("#clearSel").hidden = !spSel.cat && !spSel.merchant;
 }
@@ -881,21 +891,54 @@ function renderSpendChart(a, b, focusRows, dataFirst, dataLast) {
 }
 
 // ---- categories
-function renderCatList(cats, prevByCat, prevCovered, totalAll, days) {
+const wide = () => matchMedia("(min-width:861px)").matches;
+const miniTx = (r) => `<div class="stx ${counted(r.cat) ? "" : "off"}" data-id="${r.id}">
+    <div class="d num">${fmt(r.date, { month: "short", day: "numeric" })}</div>
+    <div class="ds"><b>${esc(r.desc)}</b><span>${spSel.cat === r.cat ? "" : `<span class="chipcat">${esc(catName(r.cat))}</span>`}${esc(acctName(r.account))}</span></div>
+    <div class="a num ${r.amount > 0 ? "in" : ""}">${r.amount > 0 ? "+" : ""}${money(Math.abs(r.amount))}</div></div>`;
+const wireTx = (root) => root.querySelectorAll(".stx").forEach((el) => el.onclick = () => recategorize(SP.rows.find((r) => r.id === el.dataset.id)));
+let sideLimit = 30;
+function catItems(rows) {
+  return rows.filter((r) => r.cat === spSel.cat && (!spSel.merchant || r.merchant === spSel.merchant))
+    .sort((x, y) => (y.date > x.date ? 1 : y.date < x.date ? -1 : 0));
+}
+// wide screens: the selected category's purchases sit in the right-hand panel, which stays in view
+function renderSideTx(rows) {
+  const box = $("#sideTx");
+  if (!spSel.cat || !wide()) { box.innerHTML = ""; return; }
+  const its = catItems(rows), shown = Math.min(its.length, sideLimit);
+  const total = its.reduce((s, r) => s - r.amount, 0);
+  box.innerHTML = `<div class="side-h"><b>${esc(spSel.merchant ? prettyMerchant(its[0] || { merchant: spSel.merchant }) : catName(spSel.cat))} · ${its.length} purchase${its.length === 1 ? "" : "s"}</b><span class="num small muted">${money(total)}</span></div>` +
+    its.slice(0, shown).map(miniTx).join("") +
+    `<div class="small muted" style="padding:8px 4px">${its.length > shown ? `<button class="btn small" type="button" data-more>Show more</button> ` : ""}tap one to change its category</div>`;
+  wireTx(box);
+  const more = $("[data-more]", box);
+  if (more) more.onclick = () => { sideLimit += 50; renderSideTx(rows); };
+}
+function renderCatList(cats, prevByCat, prevCovered, totalAll, days, rows) {
   const max = Math.max(1, ...cats.map((c) => c[1]));
   const months = days / 30.44;
   $("#catList").innerHTML = cats.map(([id, v]) => {
     const p = prevByCat[id] || 0, d = v - p;
     const change = prevCovered && p > 0 && Math.abs(d) >= 1 ? `${d >= 0 ? "▲" : "▼"} ${money0(d)} vs before` : prevCovered && !p && v > 0 ? "new" : "";
-    return `<button class="cat ${spSel.cat === id ? "on" : ""}" data-cat="${id}">
+    // phones: the selected category's purchases open right under it
+    let below = "";
+    if (spSel.cat === id && !wide()) {
+      const its = catItems(rows);
+      below = `<div class="cat-x">${its.slice(0, 10).map(miniTx).join("")}<div class="small muted" style="padding:6px 4px">${its.length > 10 ? `${its.length - 10} more in Transactions below · ` : ""}tap one to change its category</div></div>`;
+    }
+    return `<button class="cat ${spSel.cat === id ? "on" : ""}" data-cat="${id}" aria-expanded="${spSel.cat === id}">
       <span class="nm">${esc(catName(id))}</span><span class="amt num">${money(v)}</span>
       <span class="track"><i style="width:${Math.max(0, v) / max * 100}%"></i></span>
       <span class="meta num"><span>${totalAll > 0 ? Math.round(v / totalAll * 100) : 0}%</span>${months >= 1.5 ? `<span>${money0(v / months)}/mo</span>` : ""}${change ? `<span>${change}</span>` : ""}</span>
-    </button>`;
+    </button>${below}`;
   }).join("") || `<div class="muted small">Nothing counted in this range.</div>`;
   $("#catList").querySelectorAll(".cat").forEach((el) => el.onclick = () => {
-    spSel.cat = spSel.cat === el.dataset.cat ? null : el.dataset.cat; spSel.merchant = null; renderSpending();
+    spSel.cat = spSel.cat === el.dataset.cat ? null : el.dataset.cat; spSel.merchant = null; sideLimit = 30;
+    renderSpending();
+    if (wide()) $("#sidePanel").scrollTop = 0;
   });
+  wireTx($("#catList"));
 }
 function renderNotCounted(rows) {
   const groups = {};
@@ -1001,7 +1044,7 @@ function renderMerchants(list) {
   $("#merchList").innerHTML = top.map(([k, m]) => {
     const open = spSel.merchant === k;
     let inner = "";
-    if (open) {
+    if (open && !(wide() && spSel.cat)) { // on wide screens with a category picked, the side list already shows these
       const its = list.filter((r) => r.merchant === k).sort((x, y) => (y.date > x.date ? 1 : -1));
       inner = `<div class="mx">${its.slice(0, 8).map(txRow).join("")}
         <div class="small muted" style="padding:6px 4px">${its.length > 8 ? `${its.length - 8} more in Transactions below · ` : ""}tap one to change its category</div></div>`;
