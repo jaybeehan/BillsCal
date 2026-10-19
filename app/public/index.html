@@ -345,6 +345,7 @@ dialog{max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box}
   <!-- ------------------------------------------------ spending -->
   <section data-tab="spend">
     <div class="ranges" id="ranges" role="group" aria-label="Date range"></div>
+    <div class="small muted" id="rangeDates" style="margin:-4px 0 10px"></div>
     <div class="custom-range" id="customRange" hidden>
       <label>From<input type="date" id="rFrom"></label>
       <label>To<input type="date" id="rTo"></label>
@@ -725,6 +726,7 @@ function renderSpending(keepLimit) {
   if (!keepLimit) spTxLimit = 25;
   renderRanges();
   const [a, b] = rangeDates(), [pa, pb] = prevRange(a, b);
+  $("#rangeDates").textContent = `${rangeText(a, b)}${spRange.k === "this" ? " (so far)" : ""}`;
   const accts = SP.accounts.filter((x) => !x.ignore);
   const dataFirst = accts.reduce((m, x) => (!m || x.first < m ? x.first : m), null);
   const dataLast = accts.reduce((m, x) => (!m || x.last > m ? x.last : m), null);
@@ -827,8 +829,8 @@ function renderSpendChart(a, b, focusRows, dataFirst, dataLast) {
     const from = k.s < a ? a : k.s, to = k.e > b ? b : k.e;
     k.v = focusRows.filter((r) => r.date >= from && r.date <= to).reduce((t, r) => t - r.amount, 0);
     k.partial = k.s < a || k.e > b || (dataFirst && k.s < dataFirst) || (dataLast && k.e > dataLast);
-    k.label = weekly ? short(k.s) : fmt(k.s, { month: "short" });
-    k.full = weekly ? `Week of ${short(k.s)}` : fmt(k.s, { month: "long", year: "numeric" });
+    k.label = weekly ? short(from) : fmt(k.s, { month: "short" });
+    k.full = weekly ? (from === to ? short(from) : `${short(from)} – ${short(to)}`) : fmt(k.s, { month: "long", year: "numeric" });
     k.from = from; k.to = to;
   }
   const whole = buckets.filter((k) => !k.partial);
@@ -872,7 +874,7 @@ function renderSpendChart(a, b, focusRows, dataFirst, dataLast) {
     el.classList.add("hovering");
     el.querySelectorAll(".bar").forEach((p) => p.classList.toggle("hot", p.dataset.i == i));
     tip.hidden = false;
-    tip.innerHTML = `${esc(k.full)}<br><b>${money(k.v)}</b>${k.partial ? `<br><span style="opacity:.75">${k.from !== k.s || k.to !== k.e ? `only ${short(k.from)}–${short(k.to)}` : "partial data"}</span>` : ""}`;
+    tip.innerHTML = `${esc(k.full)}<br><b>${money(k.v)}</b>${k.partial ? `<br><span style="opacity:.75">${weekly ? "part of a week" : k.from !== k.s || k.to !== k.e ? `only ${short(k.from)}–${short(k.to)}` : "partial data"}</span>` : ""}`;
     const px = (L + band * i + band / 2) / W * el.clientWidth;
     tip.style.left = Math.min(Math.max(px, 70), el.clientWidth - 70) + "px";
     tip.style.top = Math.max(y(k.v) - 8, 34) + "px";
