@@ -227,15 +227,16 @@ dialog{max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box}
 .stx.off .a{color:var(--muted);font-weight:500}
 .chipcat{display:inline-block;background:var(--sunk);border-radius:5px;padding:0 5px;margin-right:4px;color:var(--ink);font-size:11.5px}
 .two.even{grid-template-columns:1fr 1fr}
-@media (min-width:861px){
+@media (min-width:701px){
   .two.even>.card.side{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;overscroll-behavior:contain}
 }
-.side-h{display:flex;justify-content:space-between;align-items:baseline;margin:14px 0 2px;padding-top:12px;border-top:1px solid var(--line)}
+.side-h{display:flex;justify-content:space-between;align-items:baseline;margin:4px 0 2px}
+#sideTx:not(:empty){margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid var(--line)}
 .side-h b{font-size:14px}
 .cat-x{margin:0 0 8px 10px;padding-left:10px;border-left:2px solid var(--viz)}
 .cat-x .stx{grid-template-columns:52px 1fr auto;font-size:13px;padding:6px 4px}
 .cat-x .stx:first-child{border-top:0}
-@media (max-width:860px){.two.even{grid-template-columns:1fr}}
+@media (max-width:700px){.two.even{grid-template-columns:1fr}}
 .dlg-cats{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;max-height:50vh;overflow:auto;margin:6px 0 10px}
 .dlg-cats label{flex-direction:row!important;align-items:center;gap:7px!important;color:var(--ink)!important;font-weight:500!important;margin:0!important;font-size:14px!important}
 @media (max-width:420px){.dlg-cats{grid-template-columns:1fr}}
@@ -374,8 +375,8 @@ dialog{max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box}
         </div>
         <div class="card side" id="sidePanel">
           <h2 id="merchTitle">Where it went</h2>
-          <div id="merchList"></div>
           <div id="sideTx"></div>
+          <div id="merchList"></div>
         </div>
       </div>
       <div class="card" style="margin-top:14px">
@@ -893,7 +894,7 @@ function renderSpendChart(a, b, focusRows, dataFirst, dataLast) {
 }
 
 // ---- categories
-const wide = () => matchMedia("(min-width:861px)").matches;
+const wide = () => matchMedia("(min-width:701px)").matches;
 const miniTx = (r) => `<div class="stx ${counted(r.cat) ? "" : "off"}" data-id="${r.id}">
     <div class="d num">${fmt(r.date, { month: "short", day: "numeric" })}</div>
     <div class="ds"><b>${esc(r.desc)}</b><span>${spSel.cat === r.cat ? "" : `<span class="chipcat">${esc(catName(r.cat))}</span>`}${esc(acctName(r.account))}</span></div>
@@ -907,7 +908,7 @@ function catItems(rows) {
 // wide screens: the selected category's purchases sit in the right-hand panel, which stays in view
 function renderSideTx(rows) {
   const box = $("#sideTx");
-  if (!spSel.cat || !wide()) { box.innerHTML = ""; return; }
+  if (!spSel.cat || !wide() || spSel.merchant) { box.innerHTML = ""; return; }
   const its = catItems(rows), shown = its.length;
   const total = its.reduce((s, r) => s - r.amount, 0);
   box.innerHTML = `<div class="side-h"><b>${esc(spSel.merchant ? prettyMerchant(its[0] || { merchant: spSel.merchant }) : catName(spSel.cat))} · ${its.length} purchase${its.length === 1 ? "" : "s"}</b><span class="num small muted">${money(total)}</span></div>` +
@@ -1046,7 +1047,7 @@ function renderMerchants(list) {
   $("#merchList").innerHTML = top.map(([k, m]) => {
     const open = spSel.merchant === k;
     let inner = "";
-    if (open && !(wide() && spSel.cat)) { // on wide screens with a category picked, the side list already shows these
+    if (open) {
       const its = list.filter((r) => r.merchant === k).sort((x, y) => (y.date > x.date ? 1 : -1));
       inner = `<div class="mx">${its.map(txRow).join("")}
         <div class="small muted" style="padding:6px 4px">tap one to change its category</div></div>`;
