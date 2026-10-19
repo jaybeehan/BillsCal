@@ -604,7 +604,7 @@ function amountDialog(b) {
     ${sheetOpts}
     <label>Or type your own amount<input name="v" inputmode="decimal" value="${b.amount_override ?? ""}" placeholder="leave empty to use the choice above"></label>`,
     async (f) => {
-      const src = [...f.src].find((r) => r.checked)?.value || "auto";
+      const src = $("#dlgForm input[name=src]:checked")?.value || "auto";
       let source = src;
       if (src === "sheet") {
         const picked = [...(f.sh?.length !== undefined ? f.sh : f.sh ? [f.sh] : [])].filter((c) => c.checked).map((c) => c.value);
@@ -973,7 +973,7 @@ $("#whatCounts").onclick = () => {
     <div class="small muted" style="font-weight:700">Bills (already on the Bills tab)</div>
     <div class="dlg-cats">${SP.categories.filter((c) => c.group === "bills").map(box).join("")}</div>`,
     async (f) => {
-      const on = new Set([...f.c].filter((x) => x.checked).map((x) => x.value));
+      const on = new Set([...$("#dlgForm").querySelectorAll("input[name=c]:checked")].map((x) => x.value));
       const bills = SP.categories.filter((c) => c.group === "bills");
       const include_bills = bills.some((c) => on.has(c.id));
       const hidden = SP.categories.filter((c) => c.group !== "none" && !on.has(c.id) && !(c.group === "bills" && !include_bills)).map((c) => c.id);
@@ -1107,7 +1107,7 @@ function recategorize(r) {
   const groups = [["spend", "Spending"], ["bills", "Bills"], ["none", "Not spending"]];
   const opts = groups.map(([g, l]) => `<optgroup label="${l}">${SP.categories.filter((c) => c.group === g).map((c) => `<option value="${c.id}" ${c.id === r.cat ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</optgroup>`).join("");
   const why = { "you set this one": "You set this one yourself.", "your rule for this payee": "From your rule for this payee.", "recurring bill": "It's a recurring bill.", "built-in list": "Matched the built-in list.", "money in": "Money coming in.", "no match": "Didn't match anything, so it's Other.", "your keywords": "Matched one of your keywords.", "category removed": "Its category was removed, so it's Other.", "learned from your choices": "Guessed from how you've sorted similar purchases." }[r.why] || "";
-  const scopes = ruleScopes(r).filter((s) => s.rows.length > 1);
+  const scopes = ruleScopes(r).filter((s) => s.rows.length >= 1);
   // default: the widest group only if everything in it is already in the same category (same kind of place);
   // otherwise the narrowest group, so "Wolf Creek" doesn't sweep up two different businesses
   let def = "one";
@@ -1128,7 +1128,8 @@ function recategorize(r) {
     ${scopeHtml}`,
     async (f) => {
       const cat = f.cat.value;
-      const scope = [...f.scope].find((x) => x.checked)?.value || "one";
+      // read the ticked choice directly: with a single choice f.scope is one input, not a list
+      const scope = $("#dlgForm input[name=scope]:checked")?.value || "one";
       const prevTx = SP.tx[r.id] ?? null;
       let body, undo;
       if (scope === "one") {
@@ -1172,7 +1173,10 @@ function dialog(inner, onOk, extra = "", setup = null, okText = "Save") {
   const dlg = $("#dlg"), form = $("#dlgForm");
   form.innerHTML = inner + `<div class="dlg-actions">${extra || ""}<span class="spacer"></span><button class="btn" value="cancel" formnovalidate>${onOk ? "Cancel" : "Close"}</button>${onOk ? `<button class="btn primary" value="ok">${okText}</button>` : ""}</div>`;
   form.onsubmit = async (e) => {
-    if (e.submitter && e.submitter.value === "ok" && onOk) { e.preventDefault(); dlg.close(); await onOk(form.elements); }
+    if (e.submitter && e.submitter.value === "ok" && onOk) {
+      e.preventDefault(); dlg.close();
+      try { await onOk(form.elements); } catch (err) { console.error(err); toast("Couldn't save: " + esc(err.message || err), 8000); }
+    }
   };
   if (setup) setup(dlg);
   dlg.showModal();
